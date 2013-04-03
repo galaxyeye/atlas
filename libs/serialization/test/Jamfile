@@ -1,0 +1,2 @@
+exe function.cpp : function.cpp ;
+exe tuple.cpp : tuple.cpp ;

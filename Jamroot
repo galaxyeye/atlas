@@ -1,0 +1,124 @@
+path-constant ATLAS_ROOT : . ;
+constant ATLAS_VERSION : 0.1.0 ;
+constant ATLAS_JAMROOT_MODULE : $(__name__) ;
+
+import package ;
+
+import sequence ;
+import xsltproc ;
+import set ;
+import path ;
+import build-system ;
+
+import os ;
+import testing ;
+import site-config ;
+
+using gcc : 4.7 : : <compileflags>-std=c++0x <compileflags>-fpermissive
+   <compileflags>-D_GLIBCXX_CONCEPT_CHECKS=1 ;
+
+project morpheus
+    : requirements 
+#      <include>$(ATLAS_ROOT)/third/include
+      <include>$(ATLAS_ROOT)
+#      <library-path>$(ATLAS_ROOT)/third/lib
+#      <library-path>/usr/local/BerkeleyDB.5.2/lib
+    : usage-requirements <include>.
+    : build-dir bin
+    ;
+
+rule pre-build ( )
+{
+    local tl = [ modules.peek : top-level-targets ] ;
+    if stage in $(tl) || install in $(tl)
+    {
+        if PAD in [ RULENAMES ]
+        {            
+            configure.print-component-configuration ;
+        }
+    }
+}
+
+IMPORT $(__name__) : pre-build : : $(__name__).pre-build ;
+build-system.set-pre-build-hook $(__name__).pre-build ;
+
+rule post-build ( ok ? ) 
+{
+    if forward in [ modules.peek : top-level-targets ] 
+    {        
+        if $(ok)
+        {
+        	ECHO "\n\nMorpheus were successfully built!" ;
+        } 
+    }
+}
+
+IMPORT $(__name__) : post-build : : $(__name__).post-build ;
+build-system.set-post-build-hook $(__name__).post-build ;
+
+rule sc-test ( name : extra-sources * )
+{   
+    lib pthread : : <name>pthread ;
+
+    lib muduo_base : : <name>muduo_base : : <search>$(ATLAS_ROOT)/third/lib ;
+    lib muduo_net : : <name>muduo_net : : <search>$(ATLAS_ROOT)/third/lib ;
+#    lib muduo_http : : <name>muduo_http : : <search>$(ATLAS_ROOT)/third/lib ;
+#    lib muduo_pubsub : : <name>muduo_pubsub : : <search>$(ATLAS_ROOT)/third/lib ;
+#    lib muduo_inspect : : <name>muduo_inspect : : <search>$(ATLAS_ROOT)/third/lib ;
+
+    lib db : : <name>db ;
+#   lib v8 : : <name>v8 ;
+
+	  lib boost_unit_test_framework : : <name>boost_unit_test_framework : : <search>/usr/lib64 ;
+
+    return [ 
+      run $(name).cpp pthread muduo_base/<link>static muduo_net/<link>static 
+        db boost_unit_test_framework/<link>static $(extra-sources) ]
+    ;
+}
+
+rule so-build ( name : extra-sources * )
+{   
+    lib pthread : : <name>pthread ;
+
+    lib muduo_base : : <name>muduo_base : : <search>$(ATLAS_ROOT)/third/lib ;
+    lib muduo_net : : <name>muduo_net : : <search>$(ATLAS_ROOT)/third/lib ;
+
+    return [ 
+      compile $(name).cpp pthread muduo_base/<link>static muduo_net/<link>static 
+         $(extra-sources) : <link>shared ]
+    ;
+}
+
+rule so-test ( name : extra-sources * )
+{   
+    lib pthread : : <name>pthread ;
+    lib dl : : <name>dl ;    
+    lib boost_unit_test_framework : : <name>boost_unit_test_framework : : <search>/usr/lib64 ;
+
+    return [ 
+      run $(name).cpp pthread dl boost_unit_test_framework/<link>static 
+         $(extra-sources) ]
+    ;
+}
+
+rule net-run ( name : extra-sources * )
+{   
+    lib pthread : : <name>pthread ;
+    lib db : : <name>db ;
+
+    lib muduo_base : : <name>muduo_base : : <search>$(ATLAS_ROOT)/third/lib ;
+    lib muduo_net : : <name>muduo_net : : <search>$(ATLAS_ROOT)/third/lib ;
+
+    return [ 
+      run $(name).cpp pthread 
+        db 
+#        muduo_base/<link>static 
+#        muduo_net/<link>static 
+        muduo_base 
+        muduo_net 
+        $(extra-sources) 
+    ]
+    ;
+}
+
