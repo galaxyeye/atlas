@@ -1,1 +1,3 @@
+lib boost_unit_test_framework ;
+
 exe inplace_string : inplace_string.cpp ;
