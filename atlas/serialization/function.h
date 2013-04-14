@@ -31,9 +31,9 @@ namespace atlas {
 
     typedef Res result_type;
 
-    function() noexcept = default;
+    function() = default;
 
-    function(std::nullptr_t) noexcept {}
+    function(std::nullptr_t) {}
 
     function(const function& other) : _args(other._args), _f(other._f) { }
 
@@ -123,7 +123,7 @@ namespace atlas {
 
     template<typename Functor>
     typename std::enable_if<!std::is_integral<Functor>::value, function&>::type
-    operator=(std::reference_wrapper<Functor> f) noexcept {
+    operator=(std::reference_wrapper<Functor> f) {
       function(f).swap(*this);
       return *this;
     }
@@ -148,7 +148,7 @@ namespace atlas {
      *
      *  This function will not throw an %exception.
      */
-    explicit operator bool() const noexcept
+    explicit operator bool() const
     { return _f.operator bool();}
 
     // [3.7.2.4] function invocation

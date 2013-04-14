@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(construction)
   BOOST_CHECK(s6 != words2);
   BOOST_CHECK(s6 == words2.substr(0, 4));
 
-  string64 s7(words, 0, 4);
+  string64 s7(words, 4);
   BOOST_CHECK(s7 == "This");
 
   string64 s8(words2, 1, 4);

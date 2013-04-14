@@ -14,6 +14,8 @@
 #include <type_traits>
 #include <limits>
 
+#include <atlas/string_algo.h>
+
 namespace atlas {
 
   /**
@@ -55,11 +57,17 @@ namespace atlas {
      *  Prevent to construct a string using a bigger string, should use other constructors instead.
      *  @param  str  Source string.
      */
-    template<size_t N2>
-    basic_inplace_string(const basic_inplace_string<T, N2, Traits>& str);
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string(const basic_inplace_string<T2, N2, Traits2>& str) : _size(std::min(str.size(), capacity())) {
+      fast_copy(_data, str.data(), _size);
+      __terminate();
+    }
 
-    template<typename Alloc>
-    basic_inplace_string(const std::basic_string<T, Traits, Alloc>& str);
+    template<typename T2, typename Traits2, typename Alloc>
+    basic_inplace_string(const std::basic_string<T2, Traits2, Alloc>& str) : _size(__size_limit(0, str.size())) {
+      fast_copy(_data, str.data(), _size);
+      __terminate();
+    }
 
     /**
      *  @brief  Construct string as copy of a substring. The string might be truncated.
@@ -67,11 +75,11 @@ namespace atlas {
      *  @param  pos  Index of first character to copy from.
      *  @param  n  Number of characters to copy (default remainder).
      */
-    template<size_t N2>
-    basic_inplace_string(const basic_inplace_string<T, N2, Traits>& str, size_type pos, size_type n = npos);
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string(const basic_inplace_string<T2, N2, Traits2>& str, size_type pos, size_type n = npos);
 
-    template<typename Alloc>
-    basic_inplace_string(const std::basic_string<T, Traits, Alloc>& str, size_type pos, size_type n = npos);
+    template<typename T2, typename Traits2, typename Alloc>
+    basic_inplace_string(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos, size_type n = npos);
 
     /**
      *  @brief  Construct string initialized by a character %array.. The string might be truncated.
@@ -82,14 +90,9 @@ namespace atlas {
      *  has no special meaning.
      */
     basic_inplace_string(const T* str, size_type n) {
-#ifdef __ATLAS_PERFORMANCE_TEST__
       n = __size_limit(0, n);
       while (*str && n--) _data[_size++] = *str++;
       __terminate();
-#else
-      // how fast traits_type::length could be?
-      __greedy_clone(str, 0, __size_limit(0, std::min(n, traits_type::length(str))));
-#endif
     }
 
     /**
@@ -97,15 +100,11 @@ namespace atlas {
      *  @param  str  Source C string.
      */
     basic_inplace_string(const T* str) {
-#ifdef __ATLAS_PERFORMANCE_TEST__
-      while (*str && size() <= capacity()) {
+      while (*str && _size <= capacity()) {
         _data[_size++] = *str++;
       }
 
       __terminate();
-#else
-      __greedy_clone(str, 0, __size_limit(0, traits_type::length(str)));
-#endif
     }
 
     /**
@@ -120,10 +119,18 @@ namespace atlas {
     }
 
     /**
-     *  @brief  No move constructor
+     *  TODO : Review move constructor
+     *  @brief  Move construct string.
+     *  @param  str  Source string.
+     *
+     *  The newly-created string contains the exact contents of @a str.
+     *  @a str is a valid, but unspecified string.
      **/
-    template<size_t N2>
-    basic_inplace_string(basic_inplace_string<T, N2, Traits>&&) = delete;
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string(basic_inplace_string<T2, N2, Traits2>&& str) : _size(std::min(str.size(), capacity())) {
+      fast_copy(_data, str.data(), _size);
+      __terminate();
+    }
 
     /**
      *  @brief  Construct string from an initializer %list. The string might be truncated.
@@ -146,12 +153,12 @@ namespace atlas {
      *  Prevent to construct a string using a bigger string, should use other constructors instead.
      *  @param  str  Source string.
      */
-    template<size_t N2>
-    basic_inplace_string& operator=(const basic_inplace_string<T, N2, Traits>& str)
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string& operator=(const basic_inplace_string<T2, N2, Traits2>& str)
     { return assign(str); }
 
-    template<typename Alloc>
-    basic_inplace_string& operator=(const std::basic_string<T, Traits, Alloc>& str, size_type pos, size_type n = npos)
+    template<typename T2, typename Traits2, typename Alloc>
+    basic_inplace_string& operator=(const std::basic_string<T2, Traits2, Alloc>& str)
     { return assign(str); }
 
     /**
@@ -174,10 +181,14 @@ namespace atlas {
     }
 
     /**
-     *  @brief  No move assignment
+     *  TODO : check move assignment operator
+     *  @brief  Copy contents of @a s into this string. The string might be truncated.
+     *  @param  str  Source null-terminated string.
      **/
-    template<size_t N2>
-    basic_inplace_string& operator=(basic_inplace_string<T, N2, Traits>&& str) = delete;
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string& operator=(basic_inplace_string<T2, N2, Traits2>&& str) {
+      return assign(str);
+    }
 
     /**
      *  @brief  Set value to string constructed from initializer %list. The string might be truncated.
@@ -238,13 +249,13 @@ namespace atlas {
 
     std::string str() const {return c_str();}
 
-    constexpr size_type capacity() const { return N;}
+    constexpr static size_type capacity() { return N;}
 
     size_type size() const { return _size; }
 
     size_type length() const { return _size; }
 
-    constexpr size_type max_size() const { return N; }
+    constexpr static size_type max_size() { return N; }
 
     /**
      *  @brief  Resizes the %string to the specified number of characters. The string may not longer than capacity
@@ -330,8 +341,8 @@ namespace atlas {
      *  @param str  The string to append.
      *  @return  Reference to this string.
      */
-    template<size_t N2>
-    basic_inplace_string& append(const basic_inplace_string<T, N2, Traits>& str);
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string& append(const basic_inplace_string<T2, N2, Traits2>& str);
 
     /**
      *  @brief  Append a substring. May append a truncated string.
@@ -346,16 +357,16 @@ namespace atlas {
      *  than the number of available characters in @a str, the
      *  remainder of @a str is appended.
      */
-    template<size_t N2>
-    basic_inplace_string& append(const basic_inplace_string<T, N2, Traits>& str, size_type pos, size_type n = npos);
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string& append(const basic_inplace_string<T2, N2, Traits2>& str, size_type pos, size_type n = npos);
 
     /**
      *  @brief  Append a string to this string. May append a truncated string.
      *  @param str  The string to append.
      *  @return  Reference to this string.
      */
-    template<typename Alloc>
-    basic_inplace_string& append(const std::basic_string<T, Traits, Alloc>& str) {
+    template<typename T2, typename Traits2, typename Alloc>
+    basic_inplace_string& append(const std::basic_string<T2, Traits2, Alloc>& str) {
       __greedy_clone(str.data(), 0, str.size());
       return *this;
     }
@@ -373,8 +384,8 @@ namespace atlas {
      *  than the number of available characters in @a str, the
      *  remainder of @a str is appended.
      */
-    template<typename Alloc>
-    basic_inplace_string& append(const std::basic_string<T, Traits, Alloc>& str, size_type pos, size_type n = npos);
+    template<typename T2, typename Traits2, typename Alloc>
+    basic_inplace_string& append(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos, size_type n = npos);
 
     /**
      *  @brief  Append a C substring. May append a truncated string.
@@ -439,16 +450,16 @@ namespace atlas {
      *  @param  str  Source string to use.
      *  @return  Reference to this string.
      */
-    template<size_t N2>
-    basic_inplace_string& assign(const basic_inplace_string<T, N2, Traits>& str) {
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string& assign(const basic_inplace_string<T2, N2, Traits2>& str) {
       return assign(str, 0, str.size());
     }
 
     /**
      * @brief No move assignment
      */
-    template<size_t N2>
-    basic_inplace_string& assign(basic_inplace_string<T, N2, Traits>&&) = delete;
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string& assign(basic_inplace_string<T2, N2, Traits2>&&) = delete;
 
     /**
      *  @brief  Set value to a substring of a string. May assign a truncated string.
@@ -463,15 +474,15 @@ namespace atlas {
      *  is larger than the number of available characters in @a
      *  str, the remainder of @a str is used.
      */
-    template<size_t N2>
-    basic_inplace_string& assign(const basic_inplace_string<T, N2, Traits>& str, size_type pos, size_type n) {
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string& assign(const basic_inplace_string<T2, N2, Traits2>& str, size_type pos, size_type n) {
       if (this == std::__addressof(str)) return *this;
       __reset();
       return append(str, pos, n);
     }
 
-    template<typename Alloc>
-    basic_inplace_string& assign(const std::basic_string<T, Traits, Alloc>& str) {
+    template<typename T2, typename Traits2, typename Alloc>
+    basic_inplace_string& assign(const std::basic_string<T2, Traits2, Alloc>& str) {
       __reset();
       return append(str);
     }
@@ -489,8 +500,8 @@ namespace atlas {
      *  is larger than the number of available characters in @a
      *  str, the remainder of @a str is used.
      */
-    template<typename Alloc>
-    basic_inplace_string& assign(const std::basic_string<T, Traits, Alloc>& str, size_type pos, size_type n = npos) {
+    template<typename T2, typename Traits2, typename Alloc>
+    basic_inplace_string& assign(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos, size_type n = npos) {
       __reset();
       return append(str, pos, n);
     }
@@ -625,12 +636,12 @@ namespace atlas {
      *  length_error is thrown.  The value of the string doesn't
      *  change if an error is thrown.
      */
-    template<size_t N2>
-    basic_inplace_string& insert(size_type pos, const basic_inplace_string<T, N2, Traits>& str)
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string& insert(size_type pos, const basic_inplace_string<T2, N2, Traits2>& str)
     { return insert(pos, str, size_type(0), str.size());}
 
-    template<typename Alloc>
-    basic_inplace_string& insert(size_type pos, const std::basic_string<T, Traits, Alloc>& str)
+    template<typename T2, typename Traits2, typename Alloc>
+    basic_inplace_string& insert(size_type pos, const std::basic_string<T2, Traits2, Alloc>& str)
     { return insert(pos, str, size_type(0), str.size());}
 
     /**
@@ -651,15 +662,16 @@ namespace atlas {
      *  beyond the end of @a str, out_of_range is thrown.  The
      *  value of the string doesn't change if an error is thrown.
      */
-    template<size_t N2>
-    basic_inplace_string& insert(size_type pos, const basic_inplace_string<T, N2, Traits>& str, size_type pos2, size_type n) {
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string&
+    insert(size_type pos, const basic_inplace_string<T2, N2, Traits2>& str, size_type pos2, size_type n) {
       n = __size_limit(pos, str.__pos_limit(pos2, n));
       return insert(pos, str.data() + str.__check(pos2, "basic_inplace_string::insert"), n);
     }
 
-    template<typename Alloc>
+    template<typename T2, typename Traits2, typename Alloc>
     basic_inplace_string&
-    insert(size_type pos, const std::basic_string<T, Traits, Alloc>& str, size_type pos2, size_type n = npos);
+    insert(size_type pos, const std::basic_string<T2, Traits2, Alloc>& str, size_type pos2, size_type n = npos);
 
     /**
      *  @brief  Insert a C substring. Do not guarantee all characters are inserted
@@ -803,12 +815,12 @@ namespace atlas {
      *  is thrown.  The value of the string doesn't change if an
      *  error is thrown.
      */
-    template<size_t N2>
-    basic_inplace_string& replace(size_type pos, size_type n, const basic_inplace_string<T, N2, Traits>& str)
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string& replace(size_type pos, size_type n, const basic_inplace_string<T2, N2, Traits2>& str)
     { return replace(pos, n, str.data(), str.size());}
 
-    template<typename Alloc>
-    basic_inplace_string& replace(size_type pos, const std::basic_string<T, Traits, Alloc>& str)
+    template<typename T2, typename Traits2, typename Alloc>
+    basic_inplace_string& replace(size_type pos, const std::basic_string<T2, Traits2, Alloc>& str)
     { return replace(pos, str, size_type(0), str.size());}
 
     /**
@@ -829,16 +841,16 @@ namespace atlas {
      *  result exceeds max_size(), length_error is thrown.  The value of the
      *  string doesn't change if an error is thrown.
      */
-    template<size_t N2>
+    template<typename T2, std::size_t N2, typename Traits2>
     basic_inplace_string&
-    replace(size_type pos, size_type n, const basic_inplace_string<T, N2, Traits>& str, size_type pos2, size_type n2) {
+    replace(size_type pos, size_type n, const basic_inplace_string<T2, N2, Traits2>& str, size_type pos2, size_type n2) {
       n2 = __size_limit(pos, str.__pos_limit(pos2, n2));
       return replace(pos, n, str.data() + str.__check(pos2, "basic_inplace_string::replace"), n2);
     }
 
-    template<typename Alloc>
+    template<typename T2, typename Traits2, typename Alloc>
     basic_inplace_string&
-    replace(size_type pos, size_type n, const std::basic_string<T, Traits, Alloc>& str, size_type pos2, size_type n2 = npos);
+    replace(size_type pos, size_type n, const std::basic_string<T2, Traits2, Alloc>& str, size_type pos2, size_type n2 = npos);
 
     /**
      *  @brief  Replace characters with value of a C substring.
@@ -914,8 +926,8 @@ namespace atlas {
      *  exceeds max_size(), length_error is thrown.  The value of
      *  the string doesn't change if an error is thrown.
      */
-    template<size_t N2>
-    basic_inplace_string& replace(iterator first, iterator last, const basic_inplace_string<T, N2, Traits>& str)
+    template<typename T2, std::size_t N2, typename Traits2>
+    basic_inplace_string& replace(iterator first, iterator last, const basic_inplace_string<T2, N2, Traits2>& str)
     { return replace(first, last, str.data(), str.size());}
 
     /**
@@ -1047,8 +1059,8 @@ namespace atlas {
      *  this string.  If found, returns the index where it begins.  If not
      *  found, returns npos.
     */
-    template<typename Alloc>
-    size_type find(const std::basic_string<T, Traits, Alloc>& str, size_type pos = 0) const
+    template<typename T2, typename Traits2, typename Alloc>
+    size_type find(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos = 0) const
     { return find(str.data(), pos, str.size()); }
 
     /**
@@ -1087,8 +1099,8 @@ namespace atlas {
      *  str within this string.  If found, returns the index where
      *  it begins.  If not found, returns npos.
     */
-    template<typename Alloc>
-    size_type rfind(const std::basic_string<T, Traits, Alloc>& str, size_type pos = npos) const
+    template<typename T2, typename Traits2, typename Alloc>
+    size_type rfind(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos = npos) const
     { return rfind(str.data(), pos, str.size()); }
 
     /**
@@ -1142,8 +1154,8 @@ namespace atlas {
      *  returns the index where it was found.  If not found, returns
      *  npos.
     */
-    template<typename Alloc>
-    size_type find_first_of(const std::basic_string<T, Traits, Alloc>& str, size_type pos = 0) const
+    template<typename T2, typename Traits2, typename Alloc>
+    size_type find_first_of(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos = 0) const
     { return find_first_of(str.data(), pos, str.size()); }
 
     /**
@@ -1199,8 +1211,8 @@ namespace atlas {
      *  returns the index where it was found.  If not found, returns
      *  npos.
     */
-    template<typename Alloc>
-    size_type find_last_of(const std::basic_string<T, Traits, Alloc>& str, size_type pos = npos) const
+    template<typename T2, typename Traits2, typename Alloc>
+    size_type find_last_of(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos = npos) const
     { return find_last_of(str.data(), pos, str.size()); }
 
     /**
@@ -1255,8 +1267,8 @@ namespace atlas {
      *  in @a str within this string.  If found, returns the index where it
      *  was found.  If not found, returns npos.
     */
-    template<typename Alloc>
-    size_type find_first_not_of(const std::basic_string<T, Traits, Alloc>& str, size_type pos = 0) const
+    template<typename T2, typename Traits2, typename Alloc>
+    size_type find_first_not_of(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos = 0) const
     { return find_first_not_of(str.data(), pos, str.size()); }
 
     /**
@@ -1309,12 +1321,12 @@ namespace atlas {
      *  returns the index where it was found.  If not found, returns
      *  npos.
     */
-    template<size_t N2>
-    size_type find_last_not_of(const basic_inplace_string<T, N2, Traits>& str, size_type pos = npos) const
+    template<typename T2, std::size_t N2, typename Traits2>
+    size_type find_last_not_of(const basic_inplace_string<T2, N2, Traits2>& str, size_type pos = npos) const
     { return find_last_not_of(str.data(), pos, str.size()); }
 
-    template<typename Alloc>
-    size_type find_last_not_of(const std::basic_string<T, Traits, Alloc>& str, size_type pos = npos) const
+    template<typename T2, typename Traits2, typename Alloc>
+    size_type find_last_not_of(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos = npos) const
     { return find_last_not_of(str.data(), pos, str.size()); }
 
     /**
@@ -1368,7 +1380,7 @@ namespace atlas {
      *  characters starting at @a pos.  If the string is too
      *  short, use the remainder of the characters.  If @a pos is
      *  beyond the end of the string, out_of_range is thrown.
-    */
+     */
     basic_inplace_string substr(size_type pos = 0, size_type n = npos) const
     { return basic_inplace_string(*this, __check(pos, "basic_inplace_string::substr"), n); }
 
@@ -1376,26 +1388,15 @@ namespace atlas {
      *  @brief  Compare to a string.
      *  @param str  String to compare against.
      *  @return  Integer < 0, 0, or > 0.
-     *
-     *  Returns an integer < 0 if this string is ordered before @a
-     *  str, 0 if their values are equivalent, or > 0 if this
-     *  string is ordered after @a str.  Determines the effective
-     *  length rlen of the strings to compare as the smallest of
-     *  size() and str.size().  The function then compares the two
-     *  strings by calling traits::compare(data(), str.data(),rlen).
-     *  If the result of the comparison is nonzero returns it,
-     *  otherwise the shorter one is ordered first.
-    */
-    template<typename N2>
-    int compare(const basic_inplace_string<T, N2, Traits>& str) const {
-      const size_type size = size();
-      const size_type size2 = str.size();
-      const size_type len = std::min(size, size2);
+     */
+    template<typename T2, std::size_t N2, typename Traits2>
+    int compare(const basic_inplace_string<T2, N2, Traits2>& str) const {
+      return compare_unchecked(data(), size(), str.data(), str.size());
+    }
 
-      int r = traits_type::compare(data(), str.data(), len);
-      if (!r) r = __compare(size, size2);
-
-      return r;
+    template<typename T2, typename Traits2, typename Alloc>
+    int compare(const std::basic_string<T2, Traits2, Alloc>& str) const {
+      return compare_unchecked(data(), size(), str.data(), str.size());
     }
 
     /**
@@ -1404,23 +1405,11 @@ namespace atlas {
      *  @param n  Number of characters in substring.
      *  @param str  String to compare against.
      *  @return  Integer < 0, 0, or > 0.
-     *
-     *  Form the substring of this string from the @a n characters
-     *  starting at @a pos.  Returns an integer < 0 if the
-     *  substring is ordered before @a str, 0 if their values are
-     *  equivalent, or > 0 if the substring is ordered after @a
-     *  str.  Determines the effective length rlen of the strings
-     *  to compare as the smallest of the length of the substring
-     *  and @a str.size().  The function then compares the two
-     *  strings by calling
-     *  traits::compare(substring.data(),str.data(),rlen).  If the
-     *  result of the comparison is nonzero returns it, otherwise
-     *  the shorter one is ordered first.
-    */
-    template<typename N2>
-    int compare(size_type pos, size_type n, const basic_inplace_string<T, N2, Traits>& str) const {
+     */
+    template<typename T2, std::size_t N2, typename Traits2>
+    int compare(size_type pos, size_type n, const basic_inplace_string<T2, N2, Traits2>& str) const {
       __check(pos, "basic_inplace_string::compare");
-      return __compare_unchecked(data() + pos, __pos_limit(pos, n), str.data(), str.size());
+      return compare_unchecked(data() + pos, __pos_limit(pos, n), str.data(), str.size());
     }
 
     /**
@@ -1431,100 +1420,51 @@ namespace atlas {
      *  @param pos2  Index of first character of substring of str.
      *  @param n2  Number of characters in substring of str.
      *  @return  Integer < 0, 0, or > 0.
-     *
-     *  Form the substring of this string from the @a n1
-     *  characters starting at @a pos1.  Form the substring of @a
-     *  str from the @a n2 characters starting at @a pos2.
-     *  Returns an integer < 0 if this substring is ordered before
-     *  the substring of @a str, 0 if their values are equivalent,
-     *  or > 0 if this substring is ordered after the substring of
-     *  @a str.  Determines the effective length rlen of the
-     *  strings to compare as the smallest of the lengths of the
-     *  substrings.  The function then compares the two strings by
-     *  calling
-     *  traits::compare(substring.data(),str.substr(pos2,n2).data(),rlen).
-     *  If the result of the comparison is nonzero returns it,
-     *  otherwise the shorter one is ordered first.
-    */
-    template<typename N2>
-    int  compare(size_type pos, size_type n,
-        const basic_inplace_string<T, N2, Traits>& str, size_type pos2, size_type n2) const {
+     */
+    template<typename T2, std::size_t N2, typename Traits2>
+    int compare(size_type pos, size_type n,
+        const basic_inplace_string<T2, N2, Traits2>& str, size_type pos2, size_type n2) const {
       __check(pos, "basic_inplace_string::compare");
       str.__check(pos2, "basic_inplace_string::compare");
 
-      return __compare_unchecked(data() + pos, __pos_limit(pos, n), str.data() + pos2, str.__pos_limit(pos2, n2));
+      return compare_unchecked(data() + pos, __pos_limit(pos, n), str.data() + pos2, str.__pos_limit(pos2, n2));
     }
-
 
     /**
      *  @brief  Compare to a C string.
      *  @param s  C string to compare against.
      *  @return  Integer < 0, 0, or > 0.
      *
-     *  Returns an integer < 0 if this string is ordered before @a s, 0 if
-     *  their values are equivalent, or > 0 if this string is ordered after
-     *  @a s.  Determines the effective length rlen of the strings to
-     *  compare as the smallest of size() and the length of a string
-     *  constructed from @a s.  The function then compares the two strings
-     *  by calling traits::compare(data(),s,rlen).  If the result of the
-     *  comparison is nonzero returns it, otherwise the shorter one is
-     *  ordered first.
-    */
+     */
     int compare(const T* s) const
-    { return __compare_unchecked(data(), size(), s, traits_type::length(s)); }
+    { return compare_unchecked(data(), size(), s, traits_type::length(s)); }
 
-    // 5 String::compare specification questionable
     /**
      *  @brief  Compare substring to a C string.
      *  @param pos  Index of first character of substring.
-     *  @param n1  Number of characters in substring.
+     *  @param n  Number of characters in substring.
      *  @param s  C string to compare against.
      *  @return  Integer < 0, 0, or > 0.
-     *
-     *  Form the substring of this string from the @a n1
-     *  characters starting at @a pos.  Returns an integer < 0 if
-     *  the substring is ordered before @a s, 0 if their values
-     *  are equivalent, or > 0 if the substring is ordered after @a
-     *  s.  Determines the effective length rlen of the strings to
-     *  compare as the smallest of the length of the substring and
-     *  the length of a string constructed from @a s.  The
-     *  function then compares the two string by calling
-     *  traits::compare(substring.data(),s,rlen).  If the result of
-     *  the comparison is nonzero returns it, otherwise the shorter
-     *  one is ordered first.
-    */
+     */
     int compare(size_type pos, size_type n, const T* s) const {
       __check(pos, "basic_inplace_string::compare");
-      return __compare_unchecked(data() + pos, __pos_limit(pos, n), s, traits_type::length(s));
+      return compare_unchecked(data() + pos, __pos_limit(pos, n), s, traits_type::length(s));
     }
 
     /**
      *  @brief  Compare substring against a character %array.
      *  @param pos  Index of first character of substring.
-     *  @param n1  Number of characters in substring.
+     *  @param n  Number of characters in substring.
      *  @param s  character %array to compare against.
      *  @param n2  Number of characters of s.
      *  @return  Integer < 0, 0, or > 0.
      *
-     *  Form the substring of this string from the @a n1
-     *  characters starting at @a pos.  Form a string from the
-     *  first @a n2 characters of @a s.  Returns an integer < 0
-     *  if this substring is ordered before the string from @a s,
-     *  0 if their values are equivalent, or > 0 if this substring
-     *  is ordered after the string from @a s.  Determines the
-     *  effective length rlen of the strings to compare as the
-     *  smallest of the length of the substring and @a n2.  The
-     *  function then compares the two strings by calling
-     *  traits::compare(substring.data(),s,rlen).  If the result of
-     *  the comparison is nonzero returns it, otherwise the shorter
-     *  one is ordered first.
-     *
      *  NB: s must have at least n2 characters, &apos;\\0&apos; has
      *  no special meaning.
     */
-    int compare(size_type pos, size_type n, const T* s, size_type n2) const {
+    int compare(size_type pos, size_type n, const T* s2, size_type n2) const {
       __check(pos, "basic_inplace_string::compare");
-      return __compare_unchecked(data() + pos, __pos_limit(pos, n), s, n2);
+      return compare_unchecked(data() + pos, __pos_limit(pos, n), s2, n2);
     }
 
   protected:
@@ -1578,38 +1518,6 @@ namespace atlas {
      **/
     basic_inplace_string& __replace_unchecked(size_type pos, size_type n, size_type n2, T c);
 
-    static int __compare_unchecked(const T* s, size_type n, const T* s2, size_type n2) const;
-
-    // When n = 1 way faster than the general multichar
-    // traits_type::copy/move/assign.
-    static void __fast_copy(T* dest, const T* src, size_type n) {
-      if (n == 1) traits_type::assign(*dest, *src);
-      else traits_type::copy(dest, src, n);
-    }
-
-    static void __fast_copy_backward(T* dest, const T* src, size_type n) {
-      if (n == 1) traits_type::assign(*dest, *src);
-      else std::copy_backward(src, src + n, dest);
-    }
-
-    static void __fast_move(T* dest, const T* src, size_type n) {
-      if (n == 1) traits_type::assign(*dest, *src);
-      else traits_type::move(dest, src, n);
-    }
-
-    static void __fast_assign(T* dest, size_type n, T c) {
-      if (n == 1) traits_type::assign(*dest, c);
-      else traits_type::assign(dest, n, c);
-    }
-
-    static int __compare(size_type n, size_type n2) {
-      const difference_type d = difference_type(n - n2);
-
-      if (d > std::numeric_limits<int>::max) return std::numeric_limits<int>::max;
-      else if (d < std::numeric_limits<int>::min) return std::numeric_limits<int>::min;
-      else return int(d);
-    }
-
     // pos + off can not greater than current string size
     size_type __pos_limit(size_type pos, size_type off) const {
       const bool test_off = off < size() - pos;
@@ -1617,10 +1525,12 @@ namespace atlas {
     }
 
     // pos + off can not greater than current string capacity
-    static size_type __size_limit(size_type pos, size_type off) const {
+    static size_type __size_limit(size_type pos, size_type off) {
       const bool test_off = off < capacity() - pos;
       return test_off ? off : capacity() - pos;
     }
+
+    size_type __free_size() const { return capacity() - size(); }
 
     void __reset() {
       _size = 0;
@@ -1629,10 +1539,12 @@ namespace atlas {
 
     void __set_size(size_type l) { _size = l; }
 
-    size_type __free_size() const { return capacity() - size(); }
-
     void __terminate() { _data[_size] = T(); }
 
+    /*  copy characters from src as many as possible.
+     *  s must have at least pos + n characters, &apos;\\0&apos; has
+     *  no special meaning.
+     **/
     void __greedy_clone(const T* src, size_type pos, size_type n);
 
   public:
@@ -1650,39 +1562,198 @@ namespace atlas {
   const typename basic_inplace_string<T, N, Traits>::size_type basic_inplace_string<T, N, Traits>::npos;
 
   // basic_inplace_string comparisons.
-  template<typename T, std::size_t N, std::size_t N2, typename Traits>
-  inline bool operator==(const basic_inplace_string<T, Traits, N>& one, const basic_inplace_string<T, Traits, N2>& two) {
-    return std::equal(one.begin(), one.end(), two.begin());
+  //////////////////////////////////////////////////
+  // equal
+  // 1.
+  template<typename T, std::size_t N, typename Traits, typename T2, std::size_t N2, typename Traits2>
+  inline bool operator==(const basic_inplace_string<T, N, Traits>& one, const basic_inplace_string<T2, N2, Traits2>& two) {
+    return one.compare(two) == 0;
   }
 
-  template<typename T, std::size_t N, std::size_t N2, typename Traits>
-  inline bool operator!=(const basic_inplace_string<T, Traits, N>& one, const basic_inplace_string<T, Traits, N2>& two) {
+  // 2.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator==(const basic_inplace_string<T, N, Traits>& one, const T* two) {
+    return one.compare(two) == 0;
+  }
+
+  // 3.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator==(const T* one, const basic_inplace_string<T, N, Traits>& two) {
+    return two.compare(one) == 0;
+  }
+
+  // 4.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator==(const basic_inplace_string<T, N, Traits>& one, const std::basic_string<T2, Traits2, Alloc>& two) {
+    return one.compare(two) == 0;
+  }
+
+  // 5.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator==(const std::basic_string<T2, Traits2, Alloc>& one, const basic_inplace_string<T, N, Traits>& two) {
+    return one.compare(two) == 0;
+  }
+
+  // not equal
+  // 1.
+  template<typename T, std::size_t N, typename Traits, typename T2, std::size_t N2, typename Traits2>
+  inline bool operator!=(const basic_inplace_string<T, N, Traits>& one, const basic_inplace_string<T2, N2, Traits2>& two) {
     return !(one == two);
   }
 
-  template<typename T, std::size_t N, std::size_t N2, typename Traits>
-  inline bool operator<(const basic_inplace_string<T, Traits, N>& one, const basic_inplace_string<T, Traits, N2>& two) {
-    return std::lexicographical_compare(one.begin(), one.end(), two.begin(), two.end());
+  // 2.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator!=(const basic_inplace_string<T, N, Traits>& one, const T* two) {
+    return !(one == two);
   }
 
-  template<typename T, std::size_t N, std::size_t N2, typename Traits>
-  inline bool operator>(const basic_inplace_string<T, Traits, N>& one, const basic_inplace_string<T, Traits, N2>& two) {
+  // 3.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator!=(const T* one, const basic_inplace_string<T, N, Traits>& two) {
+    return !(one == two);
+  }
+
+  // 4.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator!=(const basic_inplace_string<T, N, Traits>& one, const std::basic_string<T2, Traits2, Alloc>& two) {
+    return !(one == two);
+  }
+
+  // 5.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator!=(const std::basic_string<T2, Traits2, Alloc>& one, const basic_inplace_string<T, N, Traits>& two) {
+    return !(one == two);
+  }
+
+  ////////////////////////////////////////////
+  // less
+  // 1.
+  template<typename T, std::size_t N, typename Traits, typename T2, std::size_t N2, typename Traits2>
+  inline bool operator<(const basic_inplace_string<T, N, Traits>& one, const basic_inplace_string<T2, N2, Traits2>& two) {
+    return one.compare(two) < 0;
+  }
+
+  // 2.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator<(const basic_inplace_string<T, N, Traits>& one, const T* two) {
+    return one.compare(two) < 0;
+  }
+
+  // 3.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator<(const T* one, const basic_inplace_string<T, N, Traits>& two) {
+    return two.compare(one) > 0;
+  }
+
+  // 4.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator<(const basic_inplace_string<T, N, Traits>& one, const std::basic_string<T, Traits, Alloc>& two) {
+    return one.compare(two) < 0;
+  }
+
+  // 5.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator<(const std::basic_string<T, Traits, Alloc>& one, const basic_inplace_string<T, N, Traits>& two) {
+    return two.compare(one) > 0;
+  }
+
+  ///////////////////////////////////////////////
+  // greater
+  // 1.
+  template<typename T, std::size_t N, typename Traits, typename T2, std::size_t N2, typename Traits2>
+  inline bool operator>(const basic_inplace_string<T, N, Traits>& one, const basic_inplace_string<T2, N2, Traits2>& two) {
+    return one.compare(two) > 0;
+  }
+
+  // 2.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator>(const basic_inplace_string<T, N, Traits>& one, const T* two) {
+    return one.compare(two) > 0;
+  }
+
+  // 3.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator>(const T* one, const basic_inplace_string<T, N, Traits>& two) {
+    return two.compare(one) < 0;
+  }
+
+  // 4.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator>(const basic_inplace_string<T, N, Traits>& one, const std::basic_string<T2, Traits2, Alloc>& two) {
     return two < one;
   }
 
-  template<typename T, std::size_t N, std::size_t N2, typename Traits>
-  inline bool operator<=(const basic_inplace_string<T, Traits, N>& one, const basic_inplace_string<T, Traits, N2>& two) {
+  // 5.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator>(const std::basic_string<T2, Traits2, Alloc>& one, const basic_inplace_string<T, N, Traits>& two) {
+    return two < one;
+  }
+
+  // less equal
+  // 1.
+  template<typename T, std::size_t N, typename Traits, typename T2, std::size_t N2, typename Traits2>
+  inline bool operator<=(const basic_inplace_string<T, N, Traits>& one, const basic_inplace_string<T2, N2, Traits2>& two) {
     return !(one > two);
   }
 
-  template<typename T, std::size_t N, std::size_t N2, typename Traits>
-  inline bool operator>=(const basic_inplace_string<T, Traits, N>& one, const basic_inplace_string<T, Traits, N2>& two) {
+  // 2.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator<=(const basic_inplace_string<T, N, Traits>& one, const T* two) {
+    return !(one > two);
+  }
+
+  // 3.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator<=(const T* one, const basic_inplace_string<T, N, Traits>& two) {
+    return !(one > two);
+  }
+
+  // 4.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator<=(const basic_inplace_string<T, N, Traits>& one, const std::basic_string<T2, Traits2, Alloc>& two) {
+    return !(one > two);
+  }
+
+  // 5.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator<=(const std::basic_string<T2, Traits2, Alloc>& one, const basic_inplace_string<T, N, Traits>& two) {
+    return !(one > two);
+  }
+
+  // greater equal
+  // 1.
+  template<typename T, std::size_t N, typename Traits, typename T2, std::size_t N2, typename Traits2>
+  inline bool operator>=(const basic_inplace_string<T, N, Traits>& one, const basic_inplace_string<T2, N2, Traits2>& two) {
+    return !(one < two);
+  }
+
+  // 2.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator>=(const basic_inplace_string<T, N, Traits>& one, const T* two) {
+    return !(one < two);
+  }
+
+  // 3.
+  template<typename T, std::size_t N, typename Traits>
+  inline bool operator>=(const T* one, const basic_inplace_string<T, N, Traits>& two) {
+    return !(one < two);
+  }
+
+  // 4.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator>=(const basic_inplace_string<T, N, Traits>& one, const std::basic_string<T2, Traits2, Alloc>& two) {
+    return !(one < two);
+  }
+
+  // 5.
+  template<typename T, std::size_t N, typename Traits, typename T2, typename Traits2, typename Alloc>
+  inline bool operator>=(const std::basic_string<T2, Traits2, Alloc>& one, const basic_inplace_string<T, N, Traits>& two) {
     return !(one < two);
   }
 
   // Specialized algorithms.
   template<typename T, std::size_t N, typename Traits>
-  inline void swap(basic_inplace_string<T, Traits, N>& one, basic_inplace_string<T, Traits, N>& two) {
+  inline void swap(basic_inplace_string<T, N, Traits>& one, basic_inplace_string<T, N, Traits>& two) {
     one.swap(two);
   }
 
@@ -1700,7 +1771,7 @@ namespace atlas {
    */
   template<typename T, std::size_t N, typename Traits>
   inline std::basic_istream<T, Traits>&
-  operator>>(std::basic_istream<T, Traits>& is, basic_inplace_string<T, Traits, N>& str) {
+  operator>>(std::basic_istream<T, Traits>& is, basic_inplace_string<T, N, Traits>& str) {
     // TODO : optimization
     std::basic_string<T, Traits> tmp;
     is >> tmp;
@@ -1719,7 +1790,7 @@ namespace atlas {
    */
   template<typename T, std::size_t N, typename Traits>
   inline std::basic_ostream<T, Traits>&
-  operator<<(std::basic_ostream<T, Traits>& os, const basic_inplace_string<T, Traits, N>& str) {
+  operator<<(std::basic_ostream<T, Traits>& os, const basic_inplace_string<T, N, Traits>& str) {
     os.write(str.data(), str.size());
     return os;
   }

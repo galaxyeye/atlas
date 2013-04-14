@@ -13,48 +13,21 @@
 namespace atlas {
 
   template<typename T, size_t N, typename Traits>
-  template<size_t N2>
-  basic_inplace_string<T, N, Traits>::basic_inplace_string(const basic_inplace_string<T, N2, Traits>& str) :
-      _size(std::min(str.size(), capacity()))
-  {
-    __fast_copy(_data, str.data(), _size);
-    __terminate();
-  }
-
-  template<typename T, size_t N, typename Traits>
-  template<size_t N2>
-  basic_inplace_string<T, N, Traits>::basic_inplace_string(const basic_inplace_string<T, N2, Traits>& str, size_type pos, size_type n) :
+  template<typename T2, std::size_t N2, typename Traits2>
+  basic_inplace_string<T, N, Traits>::basic_inplace_string(const basic_inplace_string<T2, N2, Traits2>& str, size_type pos, size_type n) :
       _size(__size_limit(0, str.__pos_limit(pos, n)))
   {
-    __fast_copy(_data, str.data(), _size);
+    fast_copy(_data, str.data(), _size);
     __terminate();
   }
 
   template<typename T, size_t N, typename Traits>
-  template<size_t N2>
-  basic_inplace_string<T, N, Traits>::basic_inplace_string(const basic_inplace_string<T, N2, Traits>& str) :
-      _size(__size_limit(0, str.size()))
-  {
-    __fast_copy(_data, str.data(), _size);
-    __terminate();
-  }
-
-  template<typename T, size_t N, typename Traits>
-  template<typename Alloc>
-  basic_inplace_string<T, N, Traits>::basic_inplace_string(const std::basic_string<T, Traits, Alloc>& str) :
-      _size(__size_limit(0, str.size()))
-  {
-    __fast_copy(_data, str.data(), _size);
-    __terminate();
-  }
-
-  template<typename T, size_t N, typename Traits>
-  template<typename Alloc>
+  template<typename T2, typename Traits2, typename Alloc>
   basic_inplace_string<T, N, Traits>::
-  basic_inplace_string(const std::basic_string<T, Traits, Alloc>& str, size_type pos, size_type n) :
+  basic_inplace_string(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos, size_type n) :
       _size(__size_limit(0, str.size()))
   {
-    __fast_copy(_data, str.data(), _size);
+    fast_copy(_data, str.data(), _size);
     __terminate();
   }
 
@@ -100,7 +73,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  void basic_inplace_string<T, N, Traits>::swap(basic_inplace_string& other) {
+  void basic_inplace_string<T, N, Traits>::swap(basic_inplace_string<T, N, Traits>& other) {
     size_type n = _size < other._size ? _size : other._size;
     while (n--) {
       std::swap(_data[n], other._data[n]);
@@ -112,17 +85,17 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  template<size_t N2>
-  basic_inplace_string& basic_inplace_string<T, N, Traits>::append(const basic_inplace_string<T, N2, Traits>& str) {
+  template<typename T2, std::size_t N2, typename Traits2>
+  basic_inplace_string<T, N, Traits>& basic_inplace_string<T, N, Traits>::append(const basic_inplace_string<T2, N2, Traits2>& str) {
     __greedy_clone(str.data(), 0, str.size());
 
     return *this;
   }
 
   template<typename T, size_t N, typename Traits>
-  template<size_t N2>
-  basic_inplace_string&
-  basic_inplace_string<T, N, Traits>::append(const basic_inplace_string<T, N2, Traits>& str, size_type pos, size_type n) {
+  template<typename T2, std::size_t N2, typename Traits2>
+  basic_inplace_string<T, N, Traits>&
+  basic_inplace_string<T, N, Traits>::append(const basic_inplace_string<T2, N2, Traits2>& str, size_type pos, size_type n) {
     if (pos > str.size()) throw std::out_of_range("basic_inplace_string::append");
 
     __greedy_clone(str.data(), pos, str.__pos_limit(pos, n));
@@ -131,9 +104,9 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  template<typename Alloc>
-  basic_inplace_string& basic_inplace_string<T, N, Traits>::
-  append(const std::basic_string<T, Traits, Alloc>& str, size_type pos, size_type n = npos) {
+  template<typename T2, typename Traits2, typename Alloc>
+  basic_inplace_string<T, N, Traits>& basic_inplace_string<T, N, Traits>::
+  append(const std::basic_string<T2, Traits2, Alloc>& str, size_type pos, size_type n) {
     if (pos > str.size()) throw std::out_of_range("basic_inplace_string::append");
 
     __greedy_clone(str.data(), pos, std::min(str.size() - pos, n));
@@ -142,14 +115,14 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string& basic_inplace_string<T, N, Traits>::append(const T* str, size_type n) {
+  basic_inplace_string<T, N, Traits>& basic_inplace_string<T, N, Traits>::append(const T* str, size_type n) {
     __greedy_clone(str, 0, n);
 
     return *this;
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string& basic_inplace_string<T, N, Traits>::append(size_type n, T c) {
+  basic_inplace_string<T, N, Traits>& basic_inplace_string<T, N, Traits>::append(size_type n, T c) {
     const size_type append_size = __size_limit(size(), n);
 
     if (append_size) {
@@ -163,7 +136,7 @@ namespace atlas {
 
   template<typename T, size_t N, typename Traits>
   template<class InputIterator>
-  basic_inplace_string& basic_inplace_string<T, N, Traits>::append(InputIterator first, InputIterator last) {
+  basic_inplace_string<T, N, Traits>& basic_inplace_string<T, N, Traits>::append(InputIterator first, InputIterator last) {
     size_type n = __free_size();
 
     while (first != last && n--) {
@@ -175,26 +148,27 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::size_type
+  typename basic_inplace_string<T, N, Traits>::size_type
   basic_inplace_string<T, N, Traits>::copy(T* s, size_type n, size_type pos) const {
     __check(pos, "basic_string::copy");
     n = __pos_limit(pos, n);
-    if (n) __fast_copy(s, data() + pos, n);
+    if (n) fast_copy(s, data() + pos, n);
 
     // do not append null, see std::string::copy
     return n;
   }
 
+  // TODO : check correctness
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string& basic_inplace_string<T, N, Traits>::insert(size_type pos, const T* s, size_type n) {
+  basic_inplace_string<T, N, Traits>& basic_inplace_string<T, N, Traits>::insert(size_type pos, const T* s, size_type n) {
     __check(pos, "basic_string::insert");
     __check_size(size_type(0), n, "basic_string::insert");
 
-    const_iterator middle = cbegin() + pos;
+    iterator middle = begin() + pos;
     const_iterator sbegin = s;
     const_iterator send = s + n;
 
-    // TODO : __fast_copy/__fast_copy_backward version to faster
+    // TODO : fast_copy/__fast_copy_backward version to faster
     std::copy_backward(middle, end(), end() + n);
     if (send < middle) {
       std::copy(sbegin, send, middle);
@@ -210,9 +184,9 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  template<typename Alloc>
-  basic_inplace_string& basic_inplace_string<T, N, Traits>::
-  insert(size_type pos, const std::basic_string<T, Traits, Alloc>& str, size_type pos2, size_type n = npos) {
+  template<typename T2, typename Traits2, typename Alloc>
+  basic_inplace_string<T, N, Traits>& basic_inplace_string<T, N, Traits>::
+  insert(size_type pos, const std::basic_string<T2, Traits2, Alloc>& str, size_type pos2, size_type n) {
     if (pos2 > str.size()) throw std::out_of_range("basic_inplace_string::insert");
 
     n = __size_limit(pos, std::min(str.size() - pos, n));
@@ -220,7 +194,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string& basic_inplace_string<T, N, Traits>::erase(size_type pos = 0, size_type n = npos) {
+  basic_inplace_string<T, N, Traits>& basic_inplace_string<T, N, Traits>::erase(size_type pos, size_type n) {
     __check(pos, "basic_inplace_string::erase");
     n = __pos_limit(pos, n);
 
@@ -232,7 +206,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::iterator
+  typename basic_inplace_string<T, N, Traits>::iterator
   basic_inplace_string<T, N, Traits>::erase(iterator first, iterator last) {
     const size_type size = last - first;
 
@@ -245,7 +219,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string&
+  basic_inplace_string<T, N, Traits>&
   basic_inplace_string<T, N, Traits>::replace(size_type pos, size_type n, const T* str, size_type n2) {
     __check(pos, "basic_string::replace");
     n = __pos_limit(pos, n);
@@ -261,7 +235,7 @@ namespace atlas {
       size_type off = str - data();
       left ? off : (off += n2 - n);
       __mutate_unckecked(pos, n, n2);
-      __fast_copy(data() + pos, data() + off, n2);
+      fast_copy(data() + pos, data() + off, n2);
 
       __terminate();
       return *this;
@@ -274,27 +248,27 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  template<typename Alloc>
-  basic_inplace_string&
+  template<typename T2, typename Traits2, typename Alloc>
+  basic_inplace_string<T, N, Traits>&
   basic_inplace_string<T, N, Traits>::
-  replace(size_type pos, size_type n, const std::basic_string<T, Traits, Alloc>& str, size_type pos2,
-      size_type n2 = npos) {
+  replace(size_type pos, size_type n, const std::basic_string<T2, Traits2, Alloc>& str, size_type pos2,
+      size_type n2) {
     if (pos2 > str.size()) throw std::out_of_range("basic_inplace_string::insert");
 
     n2 = __size_limit(pos, std::min(str.size() - pos + n, n2));
-    return replace(pos, n, str.data() + str.__check(pos2, "basic_inplace_string::replace"), n2);
+    return replace(pos, n, str.data() + pos2, n2);
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::size_type
+  typename basic_inplace_string<T, N, Traits>::size_type
   basic_inplace_string<T, N, Traits>::find(const T* s, size_type pos, size_type n) const {
-    const size_type size = size();
+    const size_type sz = size();
     const T* d = data();
 
-    if (n == 0) return pos <= size ? pos : npos;
+    if (n == 0) return pos <= sz ? pos : npos;
 
-    if (n <= size) {
-      for (; pos <= size - n; ++pos) {
+    if (n <= sz) {
+      for (; pos <= sz - n; ++pos) {
         if (traits_type::eq(d[pos], s[0]) && traits_type::compare(d + pos + 1, s + 1, n - 1) == 0) {
           return pos;
         }
@@ -305,14 +279,14 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::size_type
-  basic_inplace_string<T, N, Traits>::find(T c, size_type pos = 0) const {
+  typename basic_inplace_string<T, N, Traits>::size_type
+  basic_inplace_string<T, N, Traits>::find(T c, size_type pos) const {
     size_type ret = npos;
-    const size_type size = size();
+    const size_type sz = size();
 
-    if (pos < size) {
+    if (pos < sz) {
       const T* d = data();
-      const size_type n = size - pos;
+      const size_type n = sz - pos;
       const T* p = traits_type::find(d + pos, n, c);
 
       if (p) ret = p - d;
@@ -322,7 +296,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::size_type
+  typename basic_inplace_string<T, N, Traits>::size_type
   basic_inplace_string<T, N, Traits>::rfind(const T* s, size_type pos, size_type n) const {
     const size_type sz = size();
 
@@ -338,7 +312,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::size_type
+  typename basic_inplace_string<T, N, Traits>::size_type
   basic_inplace_string<T, N, Traits>::rfind(T c, size_type pos) const {
     size_type sz = size();
 
@@ -351,7 +325,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::size_type
+  typename basic_inplace_string<T, N, Traits>::size_type
   basic_inplace_string<T, N, Traits>::find_first_of(const T* s, size_type pos, size_type n) const {
     for (; n && pos < size(); ++pos) {
       const T* p = traits_type::find(s, n, _data[pos]);
@@ -362,7 +336,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::size_type
+  typename basic_inplace_string<T, N, Traits>::size_type
   basic_inplace_string<T, N, Traits>::find_first_not_of(const T* s, size_type pos, size_type n) const {
     for (; pos < size(); ++pos) {
       if (!traits_type::find(s, n, _data[pos])) return pos;
@@ -372,7 +346,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::size_type
+  typename basic_inplace_string<T, N, Traits>::size_type
   basic_inplace_string<T, N, Traits>::find_first_not_of(T c, size_type pos) const {
     for (; pos < size(); ++pos) {
       if (!traits_type::eq(_data[pos], c)) return pos;
@@ -382,7 +356,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::size_type
+  typename basic_inplace_string<T, N, Traits>::size_type
   basic_inplace_string<T, N, Traits>::
   find_last_not_of(const T* s, size_type pos, size_type n) const {
     size_type sz = size();
@@ -399,7 +373,7 @@ namespace atlas {
   }
 
   template<typename T, size_t N, typename Traits>
-  basic_inplace_string<T, N, Traits>::size_type
+  typename basic_inplace_string<T, N, Traits>::size_type
   basic_inplace_string<T, N, Traits>::
   find_last_not_of(T c, size_type pos) const {
     size_type sz = size();
@@ -421,7 +395,7 @@ namespace atlas {
     __set_size(size() - n + n2);
 
     __mutate_unckecked(pos, n, n2); // move range [pos + n, pos + n2) to [pos + inc_size, size + inc_size)
-    if (n2) __fast_copy(data() + pos, src, n2); // fill blank range [pos, pos + n)
+    if (n2) fast_copy(data() + pos, src, n2); // fill blank range [pos, pos + n)
 
     __terminate();
 
@@ -434,7 +408,7 @@ namespace atlas {
     __set_size(size() - n + n2);
 
     __mutate_unckecked(pos, n, n2); // move range [pos + n, pos + n2) to [pos + inc_size, size + inc_size)
-    if (n2) __fast_assign(data() + pos, n2, c); // fill blank range [pos, pos + n)
+    if (n2) fast_assign(data() + pos, n2, c); // fill blank range [pos, pos + n)
 
     __terminate();
 
@@ -447,29 +421,18 @@ namespace atlas {
     const size_type new_size = old_size + len2 - len;
     const size_type move_size = old_size - pos - len;
 
-    std::assert(new_size < capacity());
+    // std::assert(new_size < capacity());
 
-    if (move_size && len != len2) __fast_move(data() + pos + len2, data() + pos + len, move_size);
-  }
-
-  template<typename T, size_t N, typename Traits>
-  int basic_inplace_string<T, N, Traits>::
-  __compare_unchecked(const T* s, size_type n, const T* s2, size_type n2) const {
-    const size_type len = std::min(n, n2);
-
-    int r = traits_type::compare(s, s2, len);
-    if (!r) r = __compare(n, n2);
-
-    return r;
+    if (move_size && len != len2) fast_move(data() + pos + len2, data() + pos + len, move_size);
   }
 
   template<typename T, size_t N, typename Traits>
   void basic_inplace_string<T, N, Traits>::__greedy_clone(const T* src, size_type pos, size_type n) {
-    const size_type append_size = __size_limit(size(), n);
+    const size_type inc_size = __size_limit(size(), n);
 
-    if (append_size) {
-      __set_size(size() + append_size);
-      __fast_copy(_data, src, _size);
+    if (inc_size) {
+      __set_size(size() + inc_size);
+      fast_copy(_data, src, _size);
       __terminate();
     }
   }
