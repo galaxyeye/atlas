@@ -2,10 +2,8 @@
  * singleton.h
  *
  *  Created on: Apr 8, 2013
- *      Author: vincent
+ *      Author: vincent ivincent.zhang@gmail.com
  */
-
-// see http://silviuardelean.ro/2012/06/05/few-singleton-approaches/
 
 #ifndef ATLAS_SINGLETON_H_
 #define ATLAS_SINGLETON_H_
@@ -15,37 +13,43 @@
 
 namespace atlas {
 
+  // A thread safe singleton in C++11,
+  // the managed object can be constructed with arguments.
+  // The managed object can be used by reference or a shared_ptr.
+
+  template<typename T>
   class singleton {
   public:
 
-    ~singleton();
+    ~singleton() = default;
 
-    static std::shared_ptr<singleton>& instance() {
-      static std::shared_ptr<singleton> ins = _val.lock();
+    template<typename... Args>
+    static T& ref(Args&&... args) {
+      return *ptr(std::forward<Args>(args)...);
+    }
 
-      if (!ins) {
-        std::lock_guard<std::mutex> lock(_mutex);
-
-        if (!ins) {
-          ins.reset(new singleton());
-          _val = instance;
-        }
-      }
-
-      return instance;
+    template<typename... Args>
+    static auto ptr(Args&&... args) -> std::shared_ptr<T> {
+      std::call_once(_only_one, __init<Args...>, std::forward<Args>(args)...);
+      return _value.lock();
     }
 
   private:
 
-    static std::mutex _mutex;
-    static std::weak_ptr<singleton> _val;
+    template<typename... Args>
+    static void __init(Args&&... args) {
+      _value = std::shared_ptr<T>(new T(std::forward<Args>(args)...));
+    }
 
-    singleton() {}
-    singleton(const singleton& rs) = delete;
-    singleton& operator=(const singleton& rs) = delete;
+  private:
+
+    static std::weak_ptr<T> _value;
+    static std::once_flag _only_one;
   };
 
-  std::weak_ptr<singleton> singleton::_val = nullptr;
-}
+  template<typename T> std::weak_ptr<T> singleton<T>::_value;
+  template<typename T> std::once_flag singleton<T>::_only_one;
+
+} // atlas
 
 #endif /* SINGLETON_H_ */

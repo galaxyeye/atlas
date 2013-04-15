@@ -1,5 +1,5 @@
 /*
- * thread_local_singleton.h
+ * tl_singleton.h
  *
  *  Created on: 2012-4-10
  *      Author: frank
@@ -12,7 +12,7 @@ namespace atlas {
   namespace utility {
 
     template<typename T>
-    class thread_local_singleton {
+    class tl_singleton {
     public:
 
       static T& instance() {
@@ -30,16 +30,15 @@ namespace atlas {
 
     private:
 
-      thread_local_singleton& operator=(const thread_local_singleton&) = delete;  // Disallow copying
-      thread_local_singleton(const thread_local_singleton&) = delete;
+      tl_singleton& operator=(const tl_singleton&) = delete;  // Disallow copying
+      tl_singleton(const tl_singleton&) = delete;
 
     private:
 
       static __thread T* _value;
     };
 
-    template<typename T>
-    __thread T* thread_local_singleton<T>::_value = 0;
+    template<typename T> __thread T* tl_singleton<T>::_value = 0;
 
   } // utility
 } // atlas

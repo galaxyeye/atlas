@@ -8,30 +8,27 @@
 #ifndef ATLAS_RPC_DISPATCHER_H_
 #define ATLAS_RPC_DISPATCHER_H_
 
-#include <message.h>
+#include <atlas/rpc/callable.h>
+#include <atlas/rpc/message.h>
 
 namespace atlas {
   namespace rpc {
 
+    template<>
+    struct rpc_dispacher{};
+
     class dispatcher {
     public:
 
-      static rpc_result dispatch(procedure_id id, std::istringstream& is) {
+      static rpc_result dispatch(int id, std::istringstream& is) {
         rpc_result result;
-
-        switch(procedure_id) {
-        case procedure_id::test:
-          break;
-        case procedure_id::resume_task:
-          break;
-        case procedure_id::resume_thread:
-          break;
-        default:
-          break;
-        }
 
         return result;
       }
+
+    private:
+
+      callable_map _callable_map;
     };
 
   } // rpc
