@@ -22,7 +22,7 @@ namespace atlas {
     using boost::uuids::random_generator;
     using boost::archive::binary_oarchive;
 
-    enum class procedure_type : int8_t { sync_non_void, sync_void, async_non_void, async_void };
+    enum class procedure_type : int8_t { sync, async_callback, async_no_callback };
 
     enum class default_procedure_id : int8_t { test, resume_task, resume_thread };
 

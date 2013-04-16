@@ -24,9 +24,7 @@ namespace atlas {
     ~singleton() = default;
 
     template<typename... Args>
-    static T& ref(Args&&... args) {
-      return *ptr(std::forward<Args>(args)...);
-    }
+    static T& ref(Args&&... args) { return *ptr(std::forward<Args>(args)...); }
 
     template<typename... Args>
     static auto ptr(Args&&... args) -> std::shared_ptr<T> {

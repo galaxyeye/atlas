@@ -77,21 +77,26 @@ namespace atlas {
         return make_callable(f)(std::forward<Unpacked>(unp)...);
       }
     };
-
-    // The point of this meta function is to extract the contents of the
-    // tuple as a parameter pack so we can pass it into std::result_of<>.
-    template<typename F, typename Args> struct return_value { };
-
-    template<typename F, typename ...Args>
-    struct return_value<F, std::tuple<Args...>> {
-      typedef typename std::result_of<F(Args...)>::type type;
-    };
   } // anonymous
 
+  // The point of this meta function is to extract the contents of the
+  // tuple as a parameter pack so we can pass it into std::result_of<>.
+  template<typename F, typename Args> struct declrettype { };
+
+  template<typename F, typename ...Args>
+  struct declrettype<F, std::tuple<Args...>> {
+    typedef typename std::result_of<F(Args...)>::type type;
+  };
+
+  template<typename F, typename ...Args>
+  struct is_void_cal {
+    typedef typename std::is_void<std::result_of<F(Args...)>::type>::type type;
+  };
+
   template<typename Callable, typename Tuple>
-  typename return_value<typename std::decay<Callable>::type, typename std::remove_reference<Tuple>::type>::type
+  typename declrettype<typename std::decay<Callable>::type, typename std::remove_reference<Tuple>::type>::type
   apply_tuple(const Callable& c, Tuple&& t) {
-    typedef typename return_value<typename std::decay<Callable>::type,
+    typedef typename declrettype<typename std::decay<Callable>::type,
         typename std::remove_reference<Tuple>::type>::type RetT;
     return call_tuple<RetT>::call(c, std::forward<Tuple>(t));
   }
