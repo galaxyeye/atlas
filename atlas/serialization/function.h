@@ -44,20 +44,18 @@ namespace atlas {
           typename std::enable_if<!std::is_integral<Functor>::value, useless>::type = useless())
       : _args(args...), _f(f)
       {
-        serialize(ar);
+        ar & _args;
       }
 
       /*
        * The last parameter can be replaced by a local variable
        * */
-      template<typename Functor, typename IArchiver, typename NativeArg>
-      function(Functor f, IArchiver& ia, const NativeArg& native_arg,
+      template<typename Functor, typename IArchiver>
+      function(Functor f, IArchiver& ia,
           typename std::enable_if<!std::is_integral<Functor>::value, useless>::type = useless()) :
           _f(f)
       {
-        serialize(ia);
-
-        std::get<sizeof...(Args) - 1>(_args) = native_arg;
+        ia >> _args;
       }
 
       /**
@@ -166,15 +164,7 @@ namespace atlas {
        *  The function call operator invokes the target function object
        *  stored by @c this.
        */
-      Res operator()(Args... args) const { return apply_tuple(_f, _args); }
-
-    public:
-
-      template<typename Archiver>
-      Archiver& serialize(Archiver& ar) {
-        boost::serialization::serialize(ar, _args);
-        return ar;
-      }
+      Res operator()() const { return apply_tuple(_f, _args); }
 
     public:
 
@@ -185,6 +175,7 @@ namespace atlas {
   }
 } // atlas
 
+// i hope so
 //namespace boost {
 //  namespace serialization {
 //

@@ -59,61 +59,61 @@ int main() {
     function<int(int, int)> serializable_add(add, 1, 2, oa);
   }
 
-//  {
-//    std::ifstream ifs("add.rfc");
-//    boost::archive::text_iarchive ia(ifs);
-//
-//    function<int(int, int)> serializable_add(add, ia);
-//    std::cout << serializable_add() << std::endl;
-//  }
-//
-//  {
-//    std::ofstream ofs("cadd.rfc");
-//    boost::archive::text_oarchive oa(ofs);
-//
-//    function<int(int, int)> serializable_cadd(C::add, 10, 11, oa);
-//  }
-//
-//  {
-//    std::ifstream ifs("cadd.rfc");
-//    boost::archive::text_iarchive ia(ifs);
-//
-//    function<int(int, int)> serializable_cadd(C::add, ia);
-//
-//    std::function<int()> f = std::bind(serializable_cadd);
-//    std::cout << f() << std::endl;
-//  }
-//
-//  {
-//    std::ofstream ofs("str.rfc");
-//    boost::archive::text_oarchive oa(ofs);
-//
-//    function<std::string(const std::string&)> fun(S::str, "12341312341234", oa);
-//  }
-//
-//  {
-//    std::ifstream ifs("str.rfc");
-//    boost::archive::text_iarchive ia(ifs);
-//
-//    function<std::string(const std::string&)> fun(S::str, ia);
-//
-//    std::cout << fun() << std::endl;
-//  }
-//
-//  {
-//    std::ofstream ofs("ugen.rfc");
-//    boost::archive::text_oarchive oa(ofs);
-//
-//    function<uuid(const uuid&)> ugen(U::gen, nil_uuid(), oa);
-//  }
-//
-//  {
-//    std::ifstream ifs("ugen.rfc");
-//    boost::archive::text_iarchive ia(ifs);
-//
-//    function<uuid(const uuid&)> ugen(U::gen, ia);
-//    std::cout << ugen() << std::endl;
-//  }
+  {
+    std::ifstream ifs("add.rfc");
+    boost::archive::text_iarchive ia(ifs);
+
+    function<int(int, int)> serializable_add(add, ia);
+    std::cout << serializable_add() << std::endl;
+  }
+
+  {
+    std::ofstream ofs("cadd.rfc");
+    boost::archive::text_oarchive oa(ofs);
+
+    function<int(int, int)> serializable_cadd(C::add, 10, 11, oa);
+  }
+
+  {
+    std::ifstream ifs("cadd.rfc");
+    boost::archive::text_iarchive ia(ifs);
+
+    function<int(int, int)> serializable_cadd(C::add, ia);
+
+    std::function<int()> f = std::bind(serializable_cadd);
+    std::cout << f() << std::endl;
+  }
+
+  {
+    std::ofstream ofs("str.rfc");
+    boost::archive::text_oarchive oa(ofs);
+
+    function<std::string(const std::string&)> fun(S::str, "12341312341234", oa);
+  }
+
+  {
+    std::ifstream ifs("str.rfc");
+    boost::archive::text_iarchive ia(ifs);
+
+    function<std::string(const std::string&)> fun(S::str, ia);
+
+    std::cout << fun() << std::endl;
+  }
+
+  {
+    std::ofstream ofs("ugen.rfc");
+    boost::archive::text_oarchive oa(ofs);
+
+    function<uuid(const uuid&)> ugen(U::gen, nil_uuid(), oa);
+  }
+
+  {
+    std::ifstream ifs("ugen.rfc");
+    boost::archive::text_iarchive ia(ifs);
+
+    function<uuid(const uuid&)> ugen(U::gen, ia);
+    std::cout << ugen() << std::endl;
+  }
 
   return 0;
 }

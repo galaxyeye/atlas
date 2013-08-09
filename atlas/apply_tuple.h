@@ -51,7 +51,7 @@ namespace atlas {
     }
 
     template<typename Tuple>
-    struct deref_size: std::tuple_size<typename std::remove_reference<Tuple>::type> {
+    struct deref_size: std::tuple_size<typename std::decay<Tuple>::type> {
     };
 
     // call_tuple recursively unpacks tuple arguments so we can forward
@@ -61,19 +61,16 @@ namespace atlas {
 
       template<typename F, typename Tuple, typename ...Args>
       static typename std::enable_if<(sizeof...(Args) < deref_size<Tuple>::value), Ret>::type
-      call(const F& f, Tuple&& t, Args&&... unp) {
+      call(const F& f, const Tuple& t, Args&&... unp) {
         typedef typename std::tuple_element<sizeof...(Args),
-            typename std::remove_reference<Tuple>::type>::type ElementType;
+            typename std::remove_reference<Tuple>::type>::type element_type;
 
-        return call_tuple<Ret>::call(f, std::forward<Tuple>(t),
-            std::forward<Args>(unp)...,
-            std::forward<ElementType>(std::get<sizeof...(Args)>(t))
-        );
+        return call_tuple<Ret>::call(f, t, std::forward<Args>(unp)..., std::get<sizeof...(Args)>(t));
       }
 
       template<typename F, typename Tuple, typename ...Args>
       static typename std::enable_if<(sizeof...(Args) == deref_size<Tuple>::value), Ret>::type
-      call(const F& f, Tuple&& t, Args&&... unp) {
+      call(const F& f, const Tuple& t, Args&&... unp) {
         return make_callable(f)(std::forward<Args>(unp)...);
       }
     };
@@ -84,17 +81,18 @@ namespace atlas {
   // tuple as a parameter pack so we can pass it into std::result_of<>.
   template<typename F, typename Args> struct declrtype { };
 
-  template<typename F, typename ...Args>
+  template<typename F, typename... Args>
   struct declrtype<F, std::tuple<Args...>> {
     typedef typename std::result_of<F(Args...)>::type type;
   };
 
   template<typename F, typename Tuple>
   typename declrtype<typename std::decay<F>::type, typename std::remove_reference<Tuple>::type>::type
-  apply_tuple(const F& c, Tuple&& t) {
+  apply_tuple(const F& c, const Tuple& t) {
     typedef typename declrtype<typename std::decay<F>::type,
-        typename std::remove_reference<Tuple>::type>::type RetT;
-    return call_tuple<RetT>::call(c, std::forward<Tuple>(t));
+        typename std::decay<Tuple>::type>::type return_type;
+
+    return call_tuple<return_type>::call(c, t);
   }
 
 } // atlas

@@ -1,4 +1,5 @@
 lib boost_serialization ;
 
-# exe function : function.cpp boost_serialization ;
-run tuple.cpp boost_serialization ;
+exe apply_tuple : apply_tuple.cpp ;
+exe tuple : tuple.cpp boost_serialization ;
+exe function : function.cpp boost_serialization ;

@@ -30,6 +30,6 @@ int main() {
     std::tuple<int, int, int> ints;
     ia >> ints;
 
-    std::cout << ints;
+    std::cout << ints << std::endl;
   }
 }
