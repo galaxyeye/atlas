@@ -23,20 +23,17 @@ namespace atlas {
 
     ~singleton() = default;
 
-    template<typename... Args>
-    static T& ref(Args&&... args) { return *ptr(std::forward<Args>(args)...); }
+    static T& ref() { return *ptr(); }
 
-    template<typename... Args>
-    static auto ptr(Args&&... args) -> std::shared_ptr<T> {
-      std::call_once(_only_one, __init<Args...>, std::forward<Args>(args)...);
+    static auto ptr() -> std::shared_ptr<T> {
+      std::call_once(_only_one, __init);
       return _value.lock();
     }
 
   private:
 
-    template<typename... Args>
-    static void __init(Args&&... args) {
-      _value = std::shared_ptr<T>(new T(std::forward<Args>(args)...));
+    static void __init() {
+      _value = std::make_shared<T>();
     }
 
   private:

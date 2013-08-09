@@ -5,8 +5,8 @@
  *      Author: vincent
  */
 
-#ifndef TYPE_TREE_H_
-#define TYPE_TREE_H_
+#ifndef ATLAS_MPL_AT_PATH_H_
+#define ATLAS_MPL_AT_PATH_H_
 
 namespace atlas {
   namespace mpl {
@@ -36,4 +36,4 @@ namespace atlas {
   } // mpl
 } // atlas
 
-#endif /* TYPE_TREE_H_ */
+#endif /* ATLAS_MPL_AT_PATH_H_ */

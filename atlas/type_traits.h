@@ -12,6 +12,11 @@
 
 namespace atlas {
 
+  typedef std::true_type single_parameter_pack_tag;
+  typedef std::false_type not_single_parameter_pack_tag;
+  typedef std::true_type last_parameter_tag;
+  typedef std::false_type not_last_parameter_tag;
+
   namespace {
 
     template<typename ... Elements>
@@ -27,13 +32,18 @@ namespace atlas {
   }
 
   template<typename ... Elements>
-  struct is_single_parameter_pack: public std::integral_constant<bool,
-      __is_single_parameter_pack_helper<Elements...>::type::value> {
-  };
+  struct is_single_parameter_pack :
+      public std::integral_constant<bool, __is_single_parameter_pack_helper<Elements...>::type::value>
+  {};
 
   template<size_t idx, typename ... Elements>
-  struct is_last_parameter: public std::integral_constant<bool, __is_last_parameter_helper<Elements...>::type::value> {
-  };
+  struct is_last_parameter :
+      public std::integral_constant<bool, __is_last_parameter_helper<idx, Elements...>::type::value>
+  {};
+
+//  template<typename F, typename ...Args>
+//  struct is_void_call : public std::is_void<std::result_of<F(Args...)>::type>::type {
+//  };
 
 } // atlas
 

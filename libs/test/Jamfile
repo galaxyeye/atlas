@@ -1,5 +1,5 @@
 lib boost_unit_test_framework ;
 lib pthread ;
 
-# run inplace_string.cpp boost_unit_test_framework/<link>static ;
-run singleton.cpp pthread ;
+run inplace_string.cpp boost_unit_test_framework/<link>static ;
+# run singleton.cpp pthread ;

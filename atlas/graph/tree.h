@@ -65,28 +65,28 @@ namespace atlas {
   };
 
   template<typename Node, typename Processor>
-  using tree_node_initializer = tree_node_visitor<boost::on_initialize_vertex, Processor>;
+  using tree_node_initializer = tree_node_visitor<Node, boost::on_initialize_vertex, Processor>;
 
   template<typename Node, typename Processor>
-  using tree_node_starter = tree_node_visitor<boost::on_start_vertex, Processor>;
+  using tree_node_starter = tree_node_visitor<Node, boost::on_start_vertex, Processor>;
 
   template<typename Node, typename Processor>
-  using tree_node_discover = tree_node_visitor<boost::on_discover_vertex, Processor>;
+  using tree_node_discover = tree_node_visitor<Node, boost::on_discover_vertex, Processor>;
 
   template<typename Node, typename Processor>
-  using tree_node_examiner = tree_node_visitor<boost::on_examine_vertex, Processor>;
+  using tree_node_examiner = tree_node_visitor<Node, boost::on_examine_vertex, Processor>;
 
   template<typename Node, typename Processor>
-  using tree_node_finisher = tree_node_visitor<boost::on_finish_vertex, Processor>;
+  using tree_node_finisher = tree_node_visitor<Node, boost::on_finish_vertex, Processor>;
 
   template<typename Node, typename Processor>
-  using tree_edge_examiner = tree_edge_visitor<boost::on_examine_edge, Processor>;
+  using tree_edge_examiner = tree_edge_visitor<Node, boost::on_examine_edge, Processor>;
 
   template<typename Node, typename Processor>
-  using tree_edge_finisher = tree_edge_visitor<boost::on_tree_edge, Processor>;
+  using tree_edge_finisher = tree_edge_visitor<Node, boost::on_tree_edge, Processor>;
 
   template<typename Node, typename Processor>
-  using tree_edge_back_examiner = tree_edge_visitor<boost::on_back_edge, Processor>;
+  using tree_edge_back_examiner = tree_edge_visitor<Node, boost::on_back_edge, Processor>;
 
   namespace {
 

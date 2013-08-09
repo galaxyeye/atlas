@@ -3,11 +3,11 @@ constant ATLAS_VERSION : 0.1.0 ;
 constant ATLAS_JAMROOT_MODULE : $(__name__) ;
 
 import package ;
+import sequence ;
 import path ;
 import build-system ;
 import os ;
 import testing ;
-import site-config ;
 
 using gcc : 4.7 : : <compileflags>-std=c++0x <compileflags>-fpermissive <compileflags>-D_GLIBCXX_CONCEPT_CHECKS=1 ;
 
@@ -17,3 +17,32 @@ project atlas
     : usage-requirements <include>.
     : build-dir bin
     ;
+
+rule pre-build ( )
+{
+    local tl = [ modules.peek : top-level-targets ] ;
+    if stage in $(tl) || install in $(tl)
+    {
+        if PAD in [ RULENAMES ]
+        {            
+            configure.print-component-configuration ;
+        }
+    }
+}
+
+IMPORT $(__name__) : pre-build : : $(__name__).pre-build ;
+build-system.set-pre-build-hook $(__name__).pre-build ;
+
+rule post-build ( ok ? ) 
+{
+    if forward in [ modules.peek : top-level-targets ] 
+    {
+        if $(ok)
+        {
+          ECHO "\n\nAtlas were successfully built!" ;
+        }
+    }
+}
+
+IMPORT $(__name__) : post-build : : $(__name__).post-build ;
+build-system.set-post-build-hook $(__name__).post-build ;

@@ -263,7 +263,7 @@ namespace atlas {
         }
 
         // need to capped at the original height -- the real height may have grown
-        int nodeHeight = detail::SkipListRandomHeight::instance()->
+        int nodeHeight = detail::SkipListRandomHeight::ref()->
         getHeight(max_layer + 1);
 
         scoped_locker guards[MAX_HEIGHT];
@@ -285,7 +285,7 @@ namespace atlas {
 
       int hgt = height();
       size_t sizeLimit =
-      detail::SkipListRandomHeight::instance()->getSizeLimit(hgt);
+      detail::SkipListRandomHeight::ref()->getSizeLimit(hgt);
 
       if (hgt < MAX_HEIGHT && newSize > sizeLimit) {
         growHeight(hgt + 1);

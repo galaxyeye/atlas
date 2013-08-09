@@ -15,10 +15,11 @@
 namespace atlas {
 
   namespace {
-    struct useless {};
 
     template<typename UnsignedLong>
     int compare_unsigned_long(UnsignedLong n, UnsignedLong n2) {
+      static_assert(std::is_unsigned<UnsignedLong>::value, "used for unsigned");
+
       const static size_t min_int = std::numeric_limits<int>::min();
       const static size_t max_int = std::numeric_limits<int>::max();
 
@@ -28,7 +29,7 @@ namespace atlas {
       else if (d < min_int) return std::numeric_limits<int>::min();
       else return int(d);
     }
-  }
+  } // anonymous
 
   template<typename T>
   int compare(T n, T n2) {
@@ -66,7 +67,7 @@ namespace atlas {
     return r;
   }
 
-  // When n = 1 way faster than the general multichar
+  // From gcc-4.7 STL : When n = 1 way faster than the general multichar
   // Traits::copy/move/assign.
   template<typename Ch, typename Traits = std::char_traits<Ch>>
   void fast_copy(Ch* dest, const Ch* src, size_t n) {

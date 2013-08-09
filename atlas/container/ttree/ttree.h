@@ -93,17 +93,22 @@ enum ttree_cursor_state {
  * @see Ttree
  */
 typedef struct ttree_node {
-  struct ttree_node *parent; /**< Pointer to node's parent */
-  struct ttree_node *successor; /**< Pointer to node's soccussor */
+  struct ttree_node* parent; /**< Pointer to node's parent */
+
+  struct ttree_node* successor; /**< Pointer to node's soccussor */
+
   union {
     struct ttree_node *sides[2];
+
     struct {
       struct ttree_node *left; /**< Pointer to node's left child  */
       struct ttree_node *right; /**< Pointer to node's right child */
     };
   };
+
   union {
     uint32_t pad;
+
     struct {
       signed min_idx :12; /**< Index of minimum item in node's array */
       signed max_idx :12; /**< Index of maximum item in node's array */
@@ -134,7 +139,8 @@ typedef struct ttree {
    * The field is true if keys in a tree supposed to be unique
    */
   bool keys_are_unique;
-} Ttree;
+}
+Ttree;
 
 typedef struct ttree_cursor {
   Ttree *ttree;

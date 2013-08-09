@@ -1,2 +1,4 @@
-exe function.cpp : function.cpp ;
-exe tuple.cpp : tuple.cpp ;
+lib boost_serialization ;
+
+# exe function : function.cpp boost_serialization ;
+run tuple.cpp boost_serialization ;

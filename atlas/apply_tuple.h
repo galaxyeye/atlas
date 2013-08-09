@@ -59,44 +59,40 @@ namespace atlas {
     template<typename Ret>
     struct call_tuple {
 
-      template<typename F, typename Tuple, typename ...Unpacked>
-      static typename std::enable_if<(sizeof...(Unpacked) < deref_size<Tuple>::value), Ret>::type
-      call(const F& f, Tuple&& t, Unpacked&&... unp) {
-        typedef typename std::tuple_element<sizeof...(Unpacked),
+      template<typename F, typename Tuple, typename ...Args>
+      static typename std::enable_if<(sizeof...(Args) < deref_size<Tuple>::value), Ret>::type
+      call(const F& f, Tuple&& t, Args&&... unp) {
+        typedef typename std::tuple_element<sizeof...(Args),
             typename std::remove_reference<Tuple>::type>::type ElementType;
 
         return call_tuple<Ret>::call(f, std::forward<Tuple>(t),
-            std::forward<Unpacked>(unp)...,
-            std::forward<ElementType>(std::get<sizeof...(Unpacked)>(t))
+            std::forward<Args>(unp)...,
+            std::forward<ElementType>(std::get<sizeof...(Args)>(t))
         );
       }
 
-      template<typename F, typename Tuple, typename ...Unpacked>
-      static typename std::enable_if<(sizeof...(Unpacked) == deref_size<Tuple>::value), Ret>::type
-      call(const F& f, Tuple&& t, Unpacked&&... unp) {
-        return make_callable(f)(std::forward<Unpacked>(unp)...);
+      template<typename F, typename Tuple, typename ...Args>
+      static typename std::enable_if<(sizeof...(Args) == deref_size<Tuple>::value), Ret>::type
+      call(const F& f, Tuple&& t, Args&&... unp) {
+        return make_callable(f)(std::forward<Args>(unp)...);
       }
     };
+
   } // anonymous
 
   // The point of this meta function is to extract the contents of the
   // tuple as a parameter pack so we can pass it into std::result_of<>.
-  template<typename F, typename Args> struct declrettype { };
+  template<typename F, typename Args> struct declrtype { };
 
   template<typename F, typename ...Args>
-  struct declrettype<F, std::tuple<Args...>> {
+  struct declrtype<F, std::tuple<Args...>> {
     typedef typename std::result_of<F(Args...)>::type type;
   };
 
-  template<typename F, typename ...Args>
-  struct is_void_cal {
-    typedef typename std::is_void<std::result_of<F(Args...)>::type>::type type;
-  };
-
-  template<typename Callable, typename Tuple>
-  typename declrettype<typename std::decay<Callable>::type, typename std::remove_reference<Tuple>::type>::type
-  apply_tuple(const Callable& c, Tuple&& t) {
-    typedef typename declrettype<typename std::decay<Callable>::type,
+  template<typename F, typename Tuple>
+  typename declrtype<typename std::decay<F>::type, typename std::remove_reference<Tuple>::type>::type
+  apply_tuple(const F& c, Tuple&& t) {
+    typedef typename declrtype<typename std::decay<F>::type,
         typename std::remove_reference<Tuple>::type>::type RetT;
     return call_tuple<RetT>::call(c, std::forward<Tuple>(t));
   }

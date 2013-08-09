@@ -50,7 +50,7 @@ namespace atlas {
     /**
      *  @brief  Default constructor creates an empty string.
      */
-    basic_inplace_string() = default;
+    basic_inplace_string() : _size(0) {};
 
     /**
      *  @brief  Construct string with copy of value of @a str whose capacity is smaller.
@@ -59,6 +59,8 @@ namespace atlas {
      */
     template<typename T2, std::size_t N2, typename Traits2>
     basic_inplace_string(const basic_inplace_string<T2, N2, Traits2>& str) : _size(std::min(str.size(), capacity())) {
+      static_assert(N < N2, "source string is too big");
+
       fast_copy(_data, str.data(), _size);
       __terminate();
     }
@@ -241,9 +243,9 @@ namespace atlas {
 
     const_reference back() const {return *(end() - 1);}
 
-    pointer data() {return std::__addressof(_data[0]);}
+    pointer data() {return std::addressof(_data[0]);}
 
-    const_pointer data() const {return std::__addressof(_data[0]);}
+    const_pointer data() const {return std::addressof(_data[0]);}
 
     const_pointer c_str() const {return data();}
 
