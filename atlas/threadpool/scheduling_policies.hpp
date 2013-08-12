@@ -2,17 +2,17 @@
  * \brief Task scheduling policies.
  *
  * This file contains some fundamental scheduling policies for the pool class.
- * A scheduling policy is realized by a task container which controls the access to
- * the tasks. 	Fundamentally the container determines the order the tasks are processed
+ * A scheduling policy is realized by a task _container which controls the access to
+ * the tasks. 	Fundamentally the _container determines the order the tasks are processed
  * by the thread pool.
- * The task containers need not to be thread-safe because they are used by the pool
+ * The task _containers need not to be thread-safe because they are used by the pool
  * in thread-safe way.
  *
  * Copyright (c) 2005-2007 Philipp Henkel
  *
  * Use, modification, and distribution are  subject to the
- * Boost Software License, Version 1.0. (See accompanying  file
- * LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ * boostplus Software License, Version 1.0. (See accompanying  file
+ * LICENSE_1_0.txt or copy at http://www.boostplus.org/LICENSE_1_0.txt)
  *
  * http://threadpool.sourceforge.net
  *
@@ -26,12 +26,12 @@
 
 #include "task_adaptors.hpp"
 
-namespace boostpp {
+namespace boostplus {
   namespace threadpool {
 
     /*! \brief SchedulingPolicy which implements FIFO ordering.
      *
-     * This container implements a FIFO scheduling policy.
+     * This _container implements a FIFO scheduling policy.
      * The first task to be added to the scheduler will be the first to be removed.
      * The processing proceeds sequentially in the same order.
      * FIFO stands for "first in, first out".
@@ -47,7 +47,7 @@ namespace boostpp {
 
     protected:
 
-      std::deque<task_type> m_container;  //!< Internal task container.
+      std::deque<task_type> _container; //!< Internal task _container.
 
     public:
 
@@ -55,40 +55,55 @@ namespace boostpp {
        * \param task The task object.
        * \return true, if the task could be scheduled and false otherwise.
        */
-      bool push(task_type const & task) {
-        m_container.push_back(task);
+      bool push(const task_type& task) {
+        _container.push_back(task);
+        return true;
+      }
+
+      bool push(task_type&& task) {
+        _container.push_back(task);
         return true;
       }
 
       /*! Removes the task which should be executed next.
        */
-      void pop() { m_container.pop_front(); }
+      void pop() {
+        _container.pop_front();
+      }
 
       /*! Gets the task which should be executed next.
        *  \return The task object to be executed.
        */
-      task_type const & top() const { return m_container.front(); }
+      task_type const & top() const {
+        return _container.front();
+      }
 
       /*! Gets the current number of tasks in the scheduler.
        *  \return The number of tasks.
        *  \remarks Prefer empty() to size() == 0 to check if the scheduler is empty.
        */
-      size_t size() const { return m_container.size(); }
+      size_t size() const {
+        return _container.size();
+      }
 
       /*! Checks if the scheduler is empty.
        *  \return true if the scheduler contains no tasks, false otherwise.
        *  \remarks Is more efficient than size() == 0.
        */
-      bool empty() const { return m_container.empty(); }
+      bool empty() const {
+        return _container.empty();
+      }
 
       /*! Removes all tasks from the scheduler.
        */
-      void clear() { m_container.clear(); }
+      void clear() {
+        _container.clear();
+      }
     };
 
     /*! \brief SchedulingPolicy which implements LIFO ordering.
      *
-     * This container implements a LIFO scheduling policy.
+     * This _container implements a LIFO scheduling policy.
      * The last task to be added to the scheduler will be the first to be removed.
      * LIFO stands for "last in, first out".
      *
@@ -99,11 +114,11 @@ namespace boostpp {
     class lifo_scheduler {
     public:
 
-      typedef Task task_type;  //!< Indicates the scheduler's task type.
+      typedef Task task_type; //!< Indicates the scheduler's task type.
 
     protected:
 
-      std::deque<task_type> m_container;  //!< Internal task container.
+      std::deque<task_type> _container; //!< Internal task _container.
 
     public:
 
@@ -111,41 +126,56 @@ namespace boostpp {
        * \param task The task object.
        * \return true, if the task could be scheduled and false otherwise.
        */
-      bool push(const task_type& task) {
-        m_container.push_front(task);
+      bool push(task_type const & task) {
+        _container.push_front(task);
+        return true;
+      }
+
+      bool push(task_type&& task) {
+        _container.push_back(task);
         return true;
       }
 
       /*! Removes the task which should be executed next.
        */
-      void pop() { m_container.pop_front(); }
+      void pop() {
+        _container.pop_front();
+      }
 
       /*! Gets the task which should be executed next.
        *  \return The task object to be executed.
        */
-      task_type const & top() const { return m_container.front(); }
+      task_type const & top() const {
+        return _container.front();
+      }
 
       /*! Gets the current number of tasks in the scheduler.
        *  \return The number of tasks.
        *  \remarks Prefer empty() to size() == 0 to check if the scheduler is empty.
        */
-      size_t size() const { return m_container.size(); }
+      size_t size() const {
+        return _container.size();
+      }
 
       /*! Checks if the scheduler is empty.
        *  \return true if the scheduler contains no tasks, false otherwise.
        *  \remarks Is more efficient than size() == 0.
        */
-      bool empty() const { return m_container.empty(); }
+      bool empty() const {
+        return _container.empty();
+      }
 
       /*! Removes all tasks from the scheduler.
        */
-      void clear() { m_container.clear(); }
+      void clear() {
+        _container.clear();
+      }
 
     };
 
     /*! \brief SchedulingPolicy which implements prioritized ordering.
      *
-     * This container implements a scheduling policy based on task priorities.
+     * This _container implements a scheduling policy based on task priorities.
      * The task with highest priority will be the first to be removed.
      * It must be possible to compare two tasks using operator<.
      *
@@ -162,49 +192,63 @@ namespace boostpp {
 
     protected:
 
-      std::priority_queue<task_type> m_container;  //!< Internal task container.
+      std::priority_queue<task_type> _container; //!< Internal task _container.
 
     public:
+
       /*! Adds a new task to the scheduler.
        * \param task The task object.
        * \return true, if the task could be scheduled and false otherwise.
        */
       bool push(task_type const & task) {
-        m_container.push(task);
+        _container.push(task);
+        return true;
+      }
+
+      bool push(task_type&& task) {
+        _container.push_back(task);
         return true;
       }
 
       /*! Removes the task which should be executed next.
        */
-      void pop() { m_container.pop(); }
+      void pop() {
+        _container.pop();
+      }
 
       /*! Gets the task which should be executed next.
        *  \return The task object to be executed.
        */
-      const task_type& top() const { return m_container.top(); }
+      task_type const & top() const {
+        return _container.top();
+      }
 
       /*! Gets the current number of tasks in the scheduler.
        *  \return The number of tasks.
        *  \remarks Prefer empty() to size() == 0 to check if the scheduler is empty.
        */
-      size_t size() const { return m_container.size(); }
+      size_t size() const {
+        return _container.size();
+      }
 
       /*! Checks if the scheduler is empty.
        *  \return true if the scheduler contains no tasks, false otherwise.
        *  \remarks Is more efficient than size() == 0.
        */
-      bool empty() const { return m_container.empty(); }
+      bool empty() const {
+        return _container.empty();
+      }
 
       /*! Removes all tasks from the scheduler.
        */
       void clear() {
-        while (!m_container.empty()) {
-          m_container.pop();
+        while (!_container.empty()) {
+          _container.pop();
         }
       }
     };
 
   } // threadpool
-} // boostpp
+} // boostplus
 
 #endif // THREADPOOL_SCHEDULING_POLICIES_HPP_INCLUDED

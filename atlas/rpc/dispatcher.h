@@ -1,84 +1,129 @@
 /*
- * dispatcher.h
+ *  dispatcher.h
  *
- *  Created on: Apr 8, 2013
- *      Author: vincent
+ *  Created on: Oct 10, 2011
+ *      Author: Vincent Zhang, ivincent.zhang@gmail.com
  */
 
-#ifndef ATLAS_RFC_DISPATCHER_H_
-#define ATLAS_RFC_DISPATCHER_H_
+/*    Copyright 2011 ~ 2013 Vincent Zhang, ivincent.zhang@gmail.com
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 
-#include <boost/preprocessor/repetition.hpp>
-#include <boost/fusion/include/at_c.hpp>
-#include <atlas/rfc/message.h>
+#ifndef RFC_DISPATCHER_H_
+#define RFC_DISPATCHER_H_
+
+#include <deque>
+
+#include <boost/optional.hpp>
+#include <atlas/serialization/uuid.h>
+#include <atlas/rpc/rpc.h>
 
 namespace atlas {
-  namespace rfc {
+  namespace rpc {
 
-    using boost::optional;
+    // dispatchers
+    typedef std::function<boost::optional<rpc_result>(int, const std::string&, const rpc_context&)> dispatcher_type;
 
-    template<size_t Id>
-    struct invoke_ith {
-
-      template<typename FnVec, typename FnIdx, typename ArgsList>
-      void operator()(std::istringstream& is, FnVec& fns, FnIdx& fnidx) {
-        using namespace boost::fusion;
-        result_of::at_c<ArgsList, 0>::type args;
-        is >> args;
-        apply_tuple(at_c<Id>(fns), args);
-      }
-    };
-
-    template<typename FnVec, typename FnIdx, typename ArgsList>
-    class dispatcher {
+    class builtin_dispatcher {
     public:
 
-      static optional<rpc_result> dispatch(size_t id, std::istringstream& iss) {
-        optional<rpc_result> result;
+      static boost::optional<rpc_result> dispatch(int fn_id, const std::string& message, const rpc_context& context) {
+        std::istringstream iss(message);
+        rpc_iarchive ia(iss);
 
-//        static const auto proc_invokers = boost::fusion::make_vector(
-//            try_invoke<0>(),
-//            try_invoke<1>(),
-//            try_invoke<2>(),
-//            try_invoke<3>(),
-//            try_invoke<4>(),
-//            try_invoke<5>());
-//        boost::fusion::for_each(proc_invokers, invoke);
+        // std::cout << "dispatch " << fn_id << " for " << context.session_id() << " from " << context.source_ip();
 
-        if (id == 0) invoke_ith<0>()(iss, _fns, _fnidx);
-        if (id == 1) invoke_ith<1>()(iss, _fns, _fnidx);
-        if (id == 2) invoke_ith<2>()(iss, _fns, _fnidx);
-        if (id == 3) invoke_ith<3>()(iss, _fns, _fnidx);
-        if (id == 4) invoke_ith<4>()(iss, _fns, _fnidx);
-        if (id == 5) invoke_ith<5>()(iss, _fns, _fnidx);
+        switch (fn_id) {
+        case fn_ids::resume_thread: {
+          rf_wrapper<decltype(builtin_rfc::resume_thread)> resume_thread(builtin_rfc::resume_thread, ia, context);
+          return resume_thread();
+        }
+        break;
+        case fn_ids::resume_task: {
+          rf_wrapper<decltype(builtin_rfc::resume_task)> resume_task(builtin_rfc::resume_task, ia, context);
+          return resume_task();
+        }
+        break;
+        default:
+          // not be responsible to this rpc
+          return boost::none;
+          // DLOG(INFO) << "no method " << method;
+        break;
+        } // switch
 
-        // ...
-        // bad, try better
-        // BOOST_PP_REPEAT？
-
-        return result;
+        return boost::none;
       }
-
-      template<size_t Id, typename Tuple>
-      void call(Tuple& tuple) {
-        apply_tuple(boost::fusion::at_c<Id>(_fns), std::forward<Tuple>(tuple));
-      }
-
-      template<size_t Id, typename Tuple>
-      void call(Tuple&& tuple) {
-        apply_tuple(boost::fusion::at_c<Id>(_fns), std::forward<Tuple>(tuple));
-      }
-
-//      template<size_t id, typename... Args>
-//      void call(Args&&... args) {
-//        boost::fusion::at_c<id>(_fns)(std::forward(args)...);
-//      }
-
-      FnVec _fns;
-      FnIdx _fnidx;
     };
+
+    class dispatcher_manager {
+    public:
+
+      // we invoke the dispatcher earlier if he comes later
+      // TODO : employ priority queue
+      static void regist(dispatcher_type dispatcher) {
+        std::call_once(_only_one, __init);
+        _dispatchers.push_front(dispatcher);
+      }
+
+      // throw
+      static void execute(remote_caller& response_caller, const message& msg, const std::string& source_ip_port) {
+        rpc_context context(msg.header()->client_id, msg.header()->return_type, msg.header()->session_id, source_ip_port);
+
+        auto result = atlas::rpc::dispatcher_manager::dispatch(msg.header()->fn_id, msg.rpc_str(), context);
+        if (result) respond(response_caller, context, result);
+      }
+
+      static void respond(remote_caller& caller, const rpc_context& context, const rpc_result& result) {
+        if (context.get_return_type() == rpc_async_callback) {
+          caller.call(builtin_rfc::resume_task, fn_ids::resume_task, context.session_id(), result, nilctx);
+        }
+        else if (context.get_return_type() == rpc_sync) {
+          caller.call(builtin_rfc::resume_thread, fn_ids::resume_thread, context.session_id(), result, nilctx);
+        }
+      }
+
+      static rpc_result dispatch(int fn_id, const std::string& message, const rpc_context& context) {
+        std::istringstream iss(message);
+        rpc_iarchive ia(iss);
+
+        for (const dispatcher_type& dispatcher : _dispatchers) {
+          auto result = dispatcher(fn_id, message, context);
+
+          if (result) return *result; // got a proper processor
+        }
+
+        return nullptr; // no any proper processor
+      }
+
+    private:
+
+      static void __init() {
+        using std::placeholders::_1;
+        using std::placeholders::_2;
+        using std::placeholders::_3;
+
+        _dispatchers.push_front(std::bind(builtin_dispatcher::dispatch, _1, _2, _3));
+      }
+
+      static std::once_flag _only_one;
+      static std::deque<dispatcher_type> _dispatchers;
+    };
+
+    std::once_flag dispatcher_manager::_only_one;
+    std::deque<dispatcher_type> dispatcher_manager::_dispatchers;
 
   } // rpc
 } // atlas
 
-#endif /* ATLAS_RFC_DISPATCHER_H_ */
+#endif // RFC_DISPATCHER_H_

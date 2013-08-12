@@ -7,8 +7,8 @@
  * Copyright (c) 2005-2007 Philipp Henkel
  *
  * Use, modification, and distribution are  subject to the
- * Boost Software License, Version 1.0. (See accompanying  file
- * LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ * boostplus Software License, Version 1.0. (See accompanying  file
+ * LICENSE_1_0.txt or copy at http://www.boostplus.org/LICENSE_1_0.txt)
  *
  * http://threadpool.sourceforge.net
  *
@@ -17,38 +17,60 @@
 #ifndef THREADPOOL_DETAIL_WORKER_THREAD_HPP_INCLUDED
 #define THREADPOOL_DETAIL_WORKER_THREAD_HPP_INCLUDED
 
-#include <atlas/scope_guard.h>
+#include <cassert>
+#include <memory>
+#include <thread>
+#include <mutex>
 
-namespace boostpp {
+namespace boostplus {
   namespace threadpool {
     namespace detail {
+
+      class scope_guard {
+      public:
+
+        scope_guard(std::function<void()> fn) : _fn(fn) {}
+
+        void disable() { _fn = nullptr; }
+
+        ~scope_guard() noexcept {
+          if (_fn) _fn();
+        }
+
+      private:
+
+        std::function<void()> _fn;
+      };
 
       /*! \brief Thread pool worker.
        *
        * A worker_thread represents a thread of execution. The worker is attached to a
        * thread pool and processes tasks of that pool. The lifetime of the worker and its
-       * internal std::thread is managed automatically.
+       * internal boostplus::thread is managed automatically.
        *
        * This class is a helper class and cannot be constructed or accessed directly.
        *
        * \see pool_core
        */
       template<typename Pool>
-      class worker_thread : public std::enable_shared_from_this<worker_thread<Pool> >, private boost::noncopyable {
+      class worker_thread : public std::enable_shared_from_this<worker_thread<Pool>>
+      {
       public:
 
-        typedef Pool pool_type;         	   //!< Indicates the pool's type.
+        typedef Pool pool_type;
+
+        worker_thread() = default;
+        worker_thread(worker_thread&) = delete;
+        worker_thread(const worker_thread&) = delete;
+        worker_thread& operator=(const worker_thread&) = delete;
 
       private:
-        std::shared_ptr<pool_type> _pool;     //!< Pointer to the pool which created the worker.
-        std::shared_ptr<std::thread> _thread;   //!< Pointer to the thread which executes the run loop.
 
         /*! Constructs a new worker.
          * \param pool Pointer to it's parent pool.
          * \see function create_and_attach
          */
-        worker_thread(std::shared_ptr<pool_type> const & pool) : _pool(pool) {
-          assert(pool);
+        worker_thread(const std::shared_ptr<pool_type>& pool) : _pool(pool) {
         }
 
         /*! Notifies that an exception occurred in the run loop.
@@ -62,33 +84,38 @@ namespace boostpp {
         /*! Executes pool's tasks sequentially.
          */
         void run() {
-          atlas::scope_guard notify_exception([this]() { died_unexpectedly(); });
+          scope_guard notify_exception(std::bind(&worker_thread::died_unexpectedly, this));
 
-          while (_pool->execute_task()) {
-          }
+          while (_pool->execute_task()) {}
 
-          notify_exception.dismiss();
+          notify_exception.disable();
           _pool->worker_destructed(this->shared_from_this());
         }
 
         /*! Joins the worker's thread.
          */
-        void join() { _thread->join(); }
+        void join() {
+          _thread->join();
+        }
 
         /*! Constructs a new worker thread and attaches it to the pool.
          * \param pool Pointer to the pool.
          */
-        static void create_and_attach(std::shared_ptr<pool_type> const & pool) {
-          std::shared_ptr<worker_thread> worker(new worker_thread(pool));
+        static void create_and_attach(const std::shared_ptr<pool_type>& pool) {
+          std::shared_ptr<worker_thread<Pool>> worker(new worker_thread(pool));
+
           if (worker) {
-            worker->_thread.reset(new std::thread(bind(&worker_thread::run, worker)));
+            worker->_thread.reset(new std::thread(std::bind(&worker_thread::run, worker)));
           }
         }
 
-      };
+      private:
 
+        std::shared_ptr<pool_type> _pool;
+        std::shared_ptr<std::thread> _thread;
+      };
     } // detail
   } // threadpool
-} // boost
+} // boostplus
 
 #endif // THREADPOOL_DETAIL_WORKER_THREAD_HPP_INCLUDED

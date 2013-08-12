@@ -16,19 +16,16 @@
 #ifndef THREADPOOL_TASK_ADAPTERS_HPP_INCLUDED
 #define THREADPOOL_TASK_ADAPTERS_HPP_INCLUDED
 
-#include <functional>
 #include <memory>
+#include <functional>
 #include <thread>
 
-namespace boostpp {
+namespace boostplus {
   namespace threadpool {
 
     /*! \brief Standard task function object.
      *
      * This function object wraps a nullary function which returns void.
-     * The wrapped function is invoked by calling the operator ().
-     *
-     * \see boost function library
      *
      */
     typedef std::function<void()> task_func;
@@ -42,34 +39,22 @@ namespace boostpp {
      * \see prio_scheduler
      *
      */
-    class prio_task_func
-    {
-    private:
-      unsigned int m_priority;  //!< The priority of the task's function.
-      task_func m_function;     //!< The task's function.
-
+    class prio_task_func {
     public:
+
       typedef void result_type; //!< Indicates the functor's result type.
 
     public:
-      /*! Constructor.
-       * \param priority The priority of the task.
-       * \param function The task's function object.
-       */
-      prio_task_func(unsigned int const priority, task_func const & function)
-      :
-          m_priority(priority)
-              , m_function(function)
-      {
+
+      prio_task_func(unsigned int priority, const task_func& function) :
+          _priority(priority), _function(function) {
       }
 
       /*! Executes the task function.
        */
-      void operator()(void) const
-          {
-        if (m_function)
-        {
-          m_function();
+      void operator()(void) const {
+        if (_function) {
+          _function();
         }
       }
 
@@ -77,13 +62,15 @@ namespace boostpp {
        * \param rhs The object to compare with.
        * \return true if the priority of *this is less than right hand side's priority, false otherwise.
        */
-      bool operator<(const prio_task_func& rhs) const
-          {
-        return m_priority < rhs.m_priority;
+      bool operator<(const prio_task_func& rhs) const {
+        return _priority < rhs._priority;
       }
 
+    private:
+
+      unsigned int _priority;
+      task_func _function;
     };
-    // prio_task_func
 
     /*! \brief Looped task function object.
      *
@@ -93,66 +80,64 @@ namespace boostpp {
      * Please note that a pool's thread is engaged as long as the task is looped.
      *
      */
-    class looped_task_func
-    {
+    class looped_task_func {
     private:
-      std::function<bool()> m_function;   //!< The task's function.
-      unsigned int m_break_s;              //!< Duration of breaks in seconds.
-      unsigned int m_break_ns;             //!< Duration of breaks in nano seconds.
+
+      std::function<bool()> _function; //!< The task's function.
+      unsigned int _break_s; //!< Duration of breaks in seconds.
+      unsigned int _break_ns; //!< Duration of breaks in nano seconds.
 
     public:
+
       typedef void result_type; //!< Indicates the functor's result type.
 
     public:
+
       /*! Constructor.
        * \param function The task's function object which is looped until false is returned.
        * \param interval The minimum break time in milli seconds before the first execution of the task function and between the following ones.
        */
-      looped_task_func(std::function<bool()> const & function, unsigned int const interval = 0)
-      :
-          m_function(function)
-      {
-        m_break_s = interval / 1000;
-        m_break_ns = (interval - m_break_s * 1000) * 1000 * 1000;
+      looped_task_func(const std::function<bool()>& function, const unsigned int interval = 0) :
+          _function(function) {
+        _break_s = interval / 1000;
+        _break_ns = (interval - _break_s * 1000) * 1000 * 1000;
       }
 
       /*! Executes the task function.
        */
-      void operator()(void) const
-          {
-//        if (m_function)
-//        {
-//          if (m_break_s > 0 || m_break_ns > 0)
-//              { // Sleep some time before first execution
+      void operator()() const {
+        if (_function) {
+          if (_break_s > 0 || _break_ns > 0) { // Sleep some time before first execution
 //            xtime xt;
 //            xtime_get(&xt, TIME_UTC);
-//            xt.nsec += m_break_ns;
-//            xt.sec += m_break_s;
-//            thread::sleep(xt);
-//          }
-//
-//          while (m_function())
-//          {
-//            if (m_break_s > 0 || m_break_ns > 0)
-//                {
+//            xt.nsec += _break_ns;
+//            xt.sec += _break_s;
+            // std::thread::sleep_for(xt);
+
+            // std::chrono::nanoseconds duration(_break_ns);
+            // std::this_thread::sleep_for(duration);
+
+          }
+
+          while (_function()) {
+            if (_break_s > 0 || _break_ns > 0) {
 //              xtime xt;
 //              xtime_get(&xt, TIME_UTC);
-//              xt.nsec += m_break_ns;
-//              xt.sec += m_break_s;
+//              xt.nsec += _break_ns;
+//              xt.sec += _break_s;
 //              thread::sleep(xt);
-//            }
-//            else
-//            {
-//              thread::yield(); // Be fair to other threads
-//            }
-//          }
-//        }
-      }
 
+              // std::chrono::nanoseconds duration(_break_ns);
+              // std::this_thread::sleep_for(duration);
+            }
+            else {
+              // std::this_thread::yield(); // Be fair to other threads
+            }
+          } // while
+        } // if
+      } // operator
     };
-  // looped_task_func
-
-  }
-} // namespace boost::threadpool
+  } // threadpool
+} // boostplus
 
 #endif // THREADPOOL_TASK_ADAPTERS_HPP_INCLUDED

@@ -13,6 +13,8 @@
 #include <mutex>
 #include <condition_variable>
 
+#include <boost/optional.hpp>
+
 namespace atlas {
 
   template<typename Key, typename Value, typename AssocContainer = std::unordered_map<Key, Value>>
@@ -49,12 +51,12 @@ namespace atlas {
 
     boost::optional<value_type> take(const key_type& key) {
       std::unique_lock<std::mutex> lock(_mutex);
-      _not_empty.wait_for(lock, _wait_time, []() { return !_container.empty(); });
+      _not_empty.wait_for(lock, _wait_time, [this]() { return !_container.empty(); });
 
       auto it = _container.find(key);
       if (it == _container.end()) return boost::none;
 
-      boost::optional<value_type> value = *it;
+      boost::optional<value_type> value = it->second;
       _container.erase(it);
 
       return value;
@@ -62,13 +64,13 @@ namespace atlas {
 
     boost::optional<value_type> random_take() {
       std::unique_lock<std::mutex> lock(_mutex);
-      _not_empty.wait_for(lock, _wait_time, []() { return !_container.empty(); });
+      _not_empty.wait_for(lock, _wait_time, [this]() { return !_container.empty(); });
 
       auto it = _container.begin();
       std::advance(it, get_random_index());
       if (it == _container.end()) return boost::none;
 
-      boost::optional<value_type> value = *it; // move
+      boost::optional<value_type> value = it->second; // move
       _container.erase(it);
 
       return value;
@@ -85,7 +87,7 @@ namespace atlas {
 
     boost::optional<value_type> pop() {
       std::unique_lock<std::mutex> lock(_mutex);
-      _not_empty.wait_for(lock, _wait_time, []() { return !_container.empty(); });
+      _not_empty.wait_for(lock, _wait_time, [this]() { return !_container.empty(); });
 
       if (_container.empty()) return boost::none;
 

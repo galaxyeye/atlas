@@ -7,8 +7,8 @@
  * Copyright (c) 2005-2007 Philipp Henkel
  *
  * Use, modification, and distribution are  subject to the
- * Boost Software License, Version 1.0. (See accompanying  file
- * LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ * boostplus Software License, Version 1.0. (See accompanying  file
+ * LICENSE_1_0.txt or copy at http://www.boostplus.org/LICENSE_1_0.txt)
  *
  * http://threadpool.sourceforge.net
  *
@@ -18,9 +18,9 @@
 #define THREADPOOL_POOL_ADAPTORS_HPP_INCLUDED
 
 #include <memory>
-#include <functional>
+#include <type_traits>
 
-namespace boostpp {
+namespace boostplus {
   namespace threadpool {
 
 // TODO convenience scheduling function
@@ -31,7 +31,7 @@ namespace boostpp {
      * \return true, if the task could be scheduled and false otherwise.
      */
     template<typename Pool, typename Runnable>
-    bool schedule(Pool& pool, std::shared_ptr<Runnable> const & obj) {
+    bool schedule(Pool& pool, const std::shared_ptr<Runnable>& obj) {
       return pool->schedule(std::bind(&Runnable::run, obj));
     }
 
@@ -39,18 +39,24 @@ namespace boostpp {
      * \param task The task function object.
      */
     template<typename Pool>
-    typename std::enable_if<std::is_void<typename std::result_of<typename Pool::task_type()>::type>, bool>::type
-    schedule(Pool& pool, typename Pool::task_type const & task) {
+    typename std::enable_if<
+        std::is_void<typename std::result_of<typename Pool::task_type()>::type>::type,
+        bool
+      >::type
+      schedule(Pool& pool, const typename Pool::task_type& task) {
       return pool.schedule(task);
     }
 
     template<typename Pool>
-    typename std::enable_if<std::is_void<typename std::result_of<typename Pool::task_type()>::type>, bool>::type
-    schedule(std::shared_ptr<Pool> const pool, typename Pool::task_type const & task) {
+    typename std::enable_if<
+        std::is_void<typename std::result_of<typename Pool::task_type()>::type>::type,
+        bool
+      >::type
+    schedule(const std::shared_ptr<Pool>& pool, const typename Pool::task_type & task) {
       return pool->schedule(task);
     }
 
   } // threadpool
-} // boostpp
+} // boostplus
 
 #endif // THREADPOOL_POOL_ADAPTORS_HPP_INCLUDED
