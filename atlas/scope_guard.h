@@ -12,6 +12,8 @@
 
 namespace atlas {
 
+  // a easy to use scope guard
+  // BOOST_SCOPE_EXIT is powerful but a bit too complex, we write another
   class scope_guard {
   public:
 

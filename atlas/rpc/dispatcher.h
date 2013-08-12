@@ -66,25 +66,33 @@ namespace atlas {
       }
     };
 
-    class dispatcher_manager {
+    class dispatcher_manager : public atlas::singleton<dispatcher_manager> {
+    public:
+
+      // TODO : make it private
+      dispatcher_manager() { __init(); }
+
     public:
 
       // we invoke the dispatcher earlier if he comes later
       // TODO : employ priority queue
-      static void regist(dispatcher_type dispatcher) {
-        std::call_once(_only_one, __init);
-        _dispatchers.push_front(dispatcher);
+      void regist(dispatcher_type dispatcher) {
+        using std::placeholders::_1;
+        using std::placeholders::_2;
+        using std::placeholders::_3;
+
+        _dispatchers.push_front(std::bind(dispatcher, _1, _2, _3));
       }
 
       // throw
-      static void execute(remote_caller& response_caller, const message& msg, const std::string& source_ip_port) {
+      void execute(remote_caller& response_caller, const message& msg, const std::string& source_ip_port) {
         rpc_context context(msg.header()->client_id, msg.header()->return_type, msg.header()->session_id, source_ip_port);
 
         auto result = atlas::rpc::dispatcher_manager::dispatch(msg.header()->fn_id, msg.rpc_str(), context);
         if (result) respond(response_caller, context, result);
       }
 
-      static void respond(remote_caller& caller, const rpc_context& context, const rpc_result& result) {
+      void respond(remote_caller& caller, const rpc_context& context, const rpc_result& result) {
         if (context.get_return_type() == rpc_async_callback) {
           caller.call(builtin_rfc::resume_task, fn_ids::resume_task, context.session_id(), result, nilctx);
         }
@@ -93,7 +101,7 @@ namespace atlas {
         }
       }
 
-      static rpc_result dispatch(int fn_id, const std::string& message, const rpc_context& context) {
+      rpc_result dispatch(int fn_id, const std::string& message, const rpc_context& context) {
         std::istringstream iss(message);
         rpc_iarchive ia(iss);
 
@@ -106,9 +114,9 @@ namespace atlas {
         return nullptr; // no any proper processor
       }
 
-    private:
+    protected:
 
-      static void __init() {
+      void __init() {
         using std::placeholders::_1;
         using std::placeholders::_2;
         using std::placeholders::_3;
@@ -116,14 +124,26 @@ namespace atlas {
         _dispatchers.push_front(std::bind(builtin_dispatcher::dispatch, _1, _2, _3));
       }
 
-      static std::once_flag _only_one;
-      static std::deque<dispatcher_type> _dispatchers;
+      std::deque<dispatcher_type> _dispatchers;
     };
-
-    std::once_flag dispatcher_manager::_only_one;
-    std::deque<dispatcher_type> dispatcher_manager::_dispatchers;
 
   } // rpc
 } // atlas
+
+// TODO : use meta programming
+#define ATLAS_REGISTER_RPC_DISPATCHER(module_name, dispatcher) \
+namespace atlas { \
+  namespace rpc { \
+    namespace rpc_dispatcher_registers_for_module_##module_name { \
+        class dispatcher_register { \
+        public: \
+          dispatcher_register() { \
+            dispatcher_manager::ref().regist(dispatcher); \
+          } \
+        }; \
+        dispatcher_register register_rpc_for_module_##module_name; \
+    } \
+  } \
+}
 
 #endif // RFC_DISPATCHER_H_

@@ -62,6 +62,7 @@ namespace atlas {
       return value;
     }
 
+    // TODO : optimization required
     boost::optional<value_type> random_take() {
       std::unique_lock<std::mutex> lock(_mutex);
       _not_empty.wait_for(lock, _wait_time, [this]() { return !_container.empty(); });

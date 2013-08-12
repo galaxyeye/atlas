@@ -33,7 +33,7 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/nil_generator.hpp>
 
-#ifdef DEBUG_RPC
+#ifdef ATLAS_DEBUG_RPC
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -71,13 +71,9 @@ namespace atlas {
 
 #endif
 
-#define REGISTER_REMOTE_FUNC(func_name, func_id) namespace fn_ids { \
+#define ATLAS_REGISTER_REMOTE_FUNC(func_name, func_id) namespace fn_ids { \
     static const int func_name = func_id; \
 };
-
-    namespace {
-      struct useless {};
-    }
 
     template<typename... T>
     class rf_wrapper;
@@ -97,7 +93,7 @@ namespace atlas {
       // TODO : add OArchive concept check
       template<typename Functor, typename OArchiver>
       rf_wrapper(Functor f, Args... args, OArchiver& ar,
-          typename std::enable_if<!std::is_integral<Functor>::value, useless>::type = useless()) :
+          typename std::enable_if<!std::is_integral<Functor>::value, std::nullptr_t>::type = nullptr) :
           _args(args...), _f(f)
       {
         ar << _args;
@@ -119,7 +115,7 @@ namespace atlas {
        * */
       template<typename Functor, typename IArchiver, typename NativeArg>
       rf_wrapper(Functor f, IArchiver& ia, const NativeArg& native_arg,
-          typename std::enable_if<!std::is_integral<Functor>::value, useless>::type = useless()) :
+          typename std::enable_if<!std::is_integral<Functor>::value, std::nullptr_t>::type = nullptr) :
           _f(f)
       {
         ia >> _args;
@@ -230,8 +226,8 @@ namespace atlas {
     };
 
     // builtin rpc
-    REGISTER_REMOTE_FUNC(resume_thread, -1);
-    REGISTER_REMOTE_FUNC(resume_task, -2);
+    ATLAS_REGISTER_REMOTE_FUNC(resume_thread, -1);
+    ATLAS_REGISTER_REMOTE_FUNC(resume_task, -2);
 
   } // rpc
 } // atlas
@@ -304,6 +300,8 @@ namespace atlas {
         std::string body = oss.str();
         std::string message(header_str);
         message += body;
+
+        // std::cout << body;
 
         auto h = reinterpret_cast<request_header*>(const_cast<char*>(message.data()));
         h->length = message.size();
